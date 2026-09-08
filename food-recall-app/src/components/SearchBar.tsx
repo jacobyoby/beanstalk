@@ -6,8 +6,9 @@ interface Props {
 export default function SearchBar({ value, onChange }: Props) {
   return (
     <div>
-      <label className="text-sm font-medium dark:text-zinc-300">Search</label>
+      <label htmlFor="search-input" className="text-sm font-medium dark:text-zinc-300">Search</label>
       <input
+        id="search-input"
         value={value}
         onChange={e => onChange(e.target.value)}
         placeholder="Product, reason, firm…"
