@@ -8,6 +8,7 @@ import SearchBar from './components/SearchBar'
 import FilterPanel from './components/FilterPanel'
 import { isNewRecall } from './lib/formatDate'
 import { useWatchlist } from './hooks/useWatchlist'
+import { getLastSynced } from './lib/api'
 
 export default function App(){
   const [recalls,setRecalls]=useState<Recall[]>(mockRecalls)
@@ -21,6 +22,7 @@ export default function App(){
   const [state,setState]=useState('')
   const [selected,setSelected]=useState<Recall|null>(null)
   const [page,setPage]=useState(0)
+  const [lastSynced,setLastSynced]=useState<string|null>(getLastSynced())
   const { items: watchlist } = useWatchlist()
   const limit=6
 
@@ -38,6 +40,7 @@ export default function App(){
     setRecalls(filtered)
     setTotal(t)
     setFromMock(fm)
+    setLastSynced(getLastSynced())
     setLoading(false)
   }
   useEffect(()=>{ load() },[debounced, page])
@@ -51,7 +54,7 @@ export default function App(){
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900">🍎 Food Recall Tracker</h1>
-            <p className="text-sm text-zinc-500">FDA Enforcement Reports • {fromMock ? 'Mock data (offline fallback)' : 'Live openFDA data'} • Updated 2026</p>
+            <p className="text-sm text-zinc-500">FDA Enforcement Reports • {fromMock ? 'Mock data (offline fallback)' : 'Live openFDA data'} • {lastSynced ? `Synced ${new Date(lastSynced).toLocaleString()}` : 'Updated 2026'} {import.meta.env.VITE_OPENFDA_KEY ? '• 🔑 API key' : '• no key (40/min)'}</p>
           </div>
           <div className="text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-900 max-w-sm">
             <strong>Active outbreaks:</strong> 16 FDA CORE investigations — Salmonella, Listeria, E. coli. <a className="underline" href="https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts/major-product-recalls" target="_blank" rel="noreferrer">Major recalls</a>
@@ -92,7 +95,7 @@ export default function App(){
       {selected && <RecallDetail recall={selected} onClose={()=>setSelected(null)} />}
 
       <footer className="border-t bg-white text-xs text-zinc-500 px-4 py-4 text-center">
-        Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank">openFDA Food Enforcement API</a> with mock fallback. Not medical advice.
+        Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank">openFDA Food Enforcement API</a> ({import.meta.env.VITE_OPENFDA_KEY ? '240/min with key' : '40/min — set VITE_OPENFDA_KEY for 240/min'}) • Cached 6h • {lastSynced ? `last synced ${new Date(lastSynced).toLocaleDateString()}` : 'no sync yet'} • Mock fallback • Not medical advice.
       </footer>
     </div>
   )
