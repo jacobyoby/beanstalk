@@ -13,7 +13,7 @@ interface Props {
 
 function badge(c: string) {
   if (c === 'Class I') return 'bg-red-600 text-white'
-  if (c === 'Class II') return 'bg-amber-500 text-white'
+  if (c === 'Class II') return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-700'
   return 'bg-zinc-500 text-white'
 }
 

@@ -34,7 +34,26 @@ export default defineConfig(({ mode }) => {
         workbox: { globPatterns: ['**/*.{js,css,html,svg}'] },
       }),
     ],
-    server: { port: 5173 },
+    server: {
+      port: 5173,
+      proxy: {
+        '/api/food': {
+          target: 'https://api.fda.gov',
+          changeOrigin: true,
+          rewrite: path => path.replace(/^\/api\/food/, '/food'),
+          configure: proxy => {
+            proxy.on('proxyReq', (proxyReq, req) => {
+              const url = new URL(req.url || '', 'https://api.fda.gov')
+              const apiKey = process.env.OPENFDA_API_KEY
+              if (apiKey && !url.searchParams.has('api_key')) {
+                const separator = url.search ? '&' : '?'
+                proxyReq.path += `${separator}api_key=${apiKey}`
+              }
+            })
+          },
+        },
+      },
+    },
     test: {
       environment: 'jsdom',
       globals: true,

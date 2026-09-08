@@ -12,11 +12,12 @@ interface Props {
 export default function StateFilter({ selected, onChange }: Props) {
   return (
     <div>
-      <label className="text-xs font-medium dark:text-zinc-300">Distribution State</label>
+      <label htmlFor="state-select" className="text-xs font-medium dark:text-zinc-300">Distribution State</label>
       <select
+        id="state-select"
         value={selected}
         onChange={e => onChange(e.target.value)}
-        className="mt-1 w-full border dark:border-zinc-600 rounded-lg px-2 py-2 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100"
+        className="mt-1 w-full border dark:border-zinc-600 rounded-lg px-3 py-3 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 min-h-[44px]"
       >
         <option value="">All states</option>
         <option value="Nationwide">Nationwide</option>

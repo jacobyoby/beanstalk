@@ -88,7 +88,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-amber-600 text-white px-3 py-2 rounded">Skip to content</a>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-amber-700 text-white px-3 py-2 rounded">Skip to content</a>
       <header className="sticky top-0 z-10 bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div>
@@ -100,14 +100,14 @@ export default function App() {
           </div>
           {!isDemo && <div className="flex items-center gap-3">
             {!notificationsEnabled ? (
-              <button onClick={enableNotifications} className="px-3 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Enable browser notifications for watched recalls">Enable alerts</button>
+              <button onClick={enableNotifications} className="px-3 py-2 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px]" aria-label="Enable browser notifications for watched recalls">Enable alerts</button>
             ) : (
               <span className="text-xs bg-green-100 text-green-700 border border-green-200 rounded-lg px-3 py-2" role="status">Alerts on</span>
             )}
           </div>}
         </div>
         {isDemo && <div className="bg-zinc-800 text-white text-center text-sm px-4 py-2">Interactive demo. All records and organizations are fictional.</div>}
-        {isStale && <div className="bg-amber-600 text-white text-center text-sm py-2">Stale cached data — live FDA request failed ({error?.code}). <button onClick={triggerReload} className="underline">Retry</button> <span className="opacity-80">• Cached from {lastSynced ? new Date(lastSynced).toLocaleString() : 'unknown'}</span></div>}
+        {isStale && <div className="bg-amber-700 text-white text-center text-sm py-2" role="status">Stale cached data — live FDA request failed ({error?.code}). <button onClick={triggerReload} className="underline">Retry</button> <span className="opacity-80">• Cached from {lastSynced ? new Date(lastSynced).toLocaleString() : 'unknown'}</span></div>}
       </header>
 
       <main id="main-content" className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
@@ -129,7 +129,7 @@ export default function App() {
             {!loading && error && !isStale && recalls.length===0 && (
               <div className="text-center py-12">
                 <p className="text-zinc-600" role="alert">Failed to load recalls: {error.message} ({error.code})</p>
-                {error.retryable && <button onClick={triggerReload} className="mt-3 px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">Retry</button>}
+                {error.retryable && <button onClick={triggerReload} className="mt-3 px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-600">Retry</button>}
               </div>
             )}
             {!loading && !error && recalls.length===0 && <p className="text-zinc-600 text-center py-12" role="status">No recalls match your filters.</p>}
@@ -139,9 +139,9 @@ export default function App() {
                   {recalls.map(r => <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={!isDemo && isNewRecall(r.recallInitiationDate)} watchlist={watchlist} dietary={dietary} />)}
                 </div>
                 <div className="flex items-center justify-between mt-6">
-                  <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Previous page">Previous</button>
+                  <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-3 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]" aria-label="Previous page">Previous</button>
                   <span className="text-sm text-zinc-600" aria-live="polite">Page {page+1} / {totalPages} • {total} results {isStale ? '(stale)' : ''}</span>
-                  <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Next page">Next</button>
+                  <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-3 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]" aria-label="Next page">Next</button>
                 </div>
                 {!isDemo && <p className="text-xs text-zinc-500 text-center mt-2">Sorted by report_date desc • Dates shown are recall_initiation_date or report_date from FDA</p>}
               </>
