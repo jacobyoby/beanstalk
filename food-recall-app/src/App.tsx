@@ -37,12 +37,28 @@ export default function App() {
   const [reloadKey, setReloadKey] = useState(0)
   const triggerReload = () => setReloadKey(k => k + 1)
   const limit = 6
+  const FDA_MAX_SKIP = 25000
+  const maxPage = Math.floor(FDA_MAX_SKIP / limit)
+  const rawTotalPages = Math.ceil(total / limit)
+  const totalPages = Math.max(1, Math.min(rawTotalPages, maxPage + 1))
+  const reachableTotal = Math.min(total, (maxPage + 1) * limit)
+  const hasTruncatedWindow = total > reachableTotal
 
   useEffect(() => { const t = setTimeout(() => setDebounced(query), 400); return () => clearTimeout(t) }, [query])
 
   useEffect(() => {
-    setPage(prev => (prev !== 0 ? 0 : prev))
+    setPage(prev => {
+      if (prev !== 0) return 0
+      return prev
+    })
   }, [classification, status, state, dietary, debounced])
+
+  // Clamp page when total shrinks (e.g., narrow search from later page)
+  useEffect(() => {
+    if (page >= totalPages) {
+      setPage(totalPages - 1)
+    }
+  }, [totalPages, page])
 
   useEffect(() => {
     const requestId = ++requestIdRef.current
@@ -51,7 +67,7 @@ export default function App() {
     abortRef.current = controller
     setLoading(true)
     setError(null)
-    fetchRecalls({ search: debounced, limit, skip: page * limit, classification, status, state, dietary, signal: controller.signal }).then(({ recalls: data, total: t, error: err, isStale: stale, isDemo: demo }) => {
+    fetchRecalls({ search: debounced, limit, skip: Math.min(page * limit, 25000), classification, status, state, dietary, signal: controller.signal }).then(({ recalls: data, total: t, error: err, isStale: stale, isDemo: demo }) => {
       if (requestId !== requestIdRef.current) return
       if (controller.signal.aborted) return
       setRecalls(data)
@@ -77,8 +93,6 @@ export default function App() {
     })
     return () => controller.abort()
   }, [debounced, page, classification, status, state, dietary, reloadKey, watchlist, notificationsEnabled])
-
-  const totalPages = Math.max(1, Math.ceil(total / limit))
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -130,9 +144,10 @@ export default function App() {
                 </div>
                 <div className="flex items-center justify-between mt-6">
                   <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-3 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]" aria-label="Previous page">Previous</button>
-                  <span className="text-sm text-zinc-600" aria-live="polite">Page {page+1} / {totalPages} • {total} results {isStale ? '(stale)' : ''}</span>
+                  <span className="text-sm text-zinc-600" aria-live="polite">Page {page+1} / {totalPages} • {hasTruncatedWindow ? `${reachableTotal} of ${total} reachable` : `${total} results`} {isStale ? '(stale)' : ''}</span>
                   <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-3 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]" aria-label="Next page">Next</button>
                 </div>
+                {hasTruncatedWindow && <p className="text-xs text-amber-600 text-center mt-2">Showing first {reachableTotal.toLocaleString()} of {total.toLocaleString()} • Narrow filters to see more • FDA offset limit {FDA_MAX_SKIP.toLocaleString()} prevents beyond page {maxPage+1}</p>}
                 <p className="text-xs text-zinc-500 text-center mt-2">Sorted by report_date desc • Dates shown are recall_initiation_date or report_date from FDA</p>
               </>
             )}
