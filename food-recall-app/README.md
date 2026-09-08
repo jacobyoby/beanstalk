@@ -1,4 +1,4 @@
-# Food Recall Tracker
+# Beanstalk — Food Recall Tracker
 
 Responsive Food Recall app — search/filter FDA food recalls with openFDA + mock fallback.
 
