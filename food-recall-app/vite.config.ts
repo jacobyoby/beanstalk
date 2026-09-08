@@ -8,8 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       manifest: {
-        name: 'Ponder — Food Recall Tracker',
-        short_name: 'Ponder',
+        name: 'Beanstalk — Food Recall Tracker',
+        short_name: 'Beanstalk',
         description: 'Track FDA food recalls and get alerts',
         theme_color: '#fafafa',
         background_color: '#fafafa',
