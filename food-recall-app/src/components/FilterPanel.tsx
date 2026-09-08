@@ -16,7 +16,7 @@ export default function FilterPanel({ classification, status, state, onClassific
     <div className="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl p-4 space-y-3">
       <div className="flex justify-between items-center">
         <h3 className="font-semibold text-sm dark:text-zinc-100">Filters</h3>
-        <button onClick={onClear} className="text-xs underline text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200">Clear</button>
+        <button onClick={onClear} className="text-xs underline text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-500 rounded" aria-label="Clear all filters">Clear</button>
       </div>
       <div>
         <label className="text-xs font-medium dark:text-zinc-300">Classification</label>

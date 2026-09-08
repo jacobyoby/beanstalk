@@ -50,11 +50,12 @@ export default function App(){
 
   return (
     <div className="min-h-screen flex flex-col">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-amber-600 text-white px-3 py-2 rounded">Skip to content</a>
       <header className="sticky top-0 z-10 bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900">🍎 Food Recall Tracker</h1>
-            <p className="text-sm text-zinc-500">FDA Enforcement Reports • {fromMock ? 'Mock data (offline fallback)' : 'Live openFDA data'} • {lastSynced ? `Synced ${new Date(lastSynced).toLocaleString()}` : 'Updated 2026'} {import.meta.env.VITE_OPENFDA_KEY ? '• 🔑 API key' : '• no key (40/min)'}</p>
+            <p className="text-sm text-zinc-600">FDA Enforcement Reports • {fromMock ? 'Mock data (offline fallback)' : 'Live openFDA data'} • {lastSynced ? `Synced ${new Date(lastSynced).toLocaleString()}` : 'Updated 2026'} {import.meta.env.VITE_OPENFDA_KEY ? '• 🔑 API key' : '• no key (40/min)'}</p>
           </div>
           <div className="text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-amber-900 max-w-sm">
             <strong>Active outbreaks:</strong> 16 FDA CORE investigations — Salmonella, Listeria, E. coli. <a className="underline" href="https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts/major-product-recalls" target="_blank" rel="noreferrer">Major recalls</a>
@@ -62,14 +63,14 @@ export default function App(){
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
+      <main id="main-content" className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
         <div className="flex flex-col lg:flex-row gap-6">
           {/* Sidebar filters */}
           <aside className="lg:w-64 shrink-0">
             <div className="lg:sticky lg:top-[88px] space-y-4">
               <SearchBar value={query} onChange={setQuery} />
               <FilterPanel classification={classification} status={status} state={state} onClassification={setClassification} onStatus={setStatus} onState={setState} onClear={()=>{setClassification('');setStatus('');setState('');setQuery('')}} />
-              <div className="text-xs text-zinc-500 bg-zinc-100 rounded-lg p-3">
+              <div className="text-xs text-zinc-600 bg-zinc-100 rounded-lg p-3">
                 <p className="font-semibold">Classification</p>
                 <p>Class I = reasonable probability of serious harm. ~70% of 2025 recalls.</p>
               </div>
@@ -77,16 +78,16 @@ export default function App(){
           </aside>
 
           {/* Content */}
-          <section className="flex-1 min-w-0">
-            {loading && <p className="text-sm text-zinc-500 mb-3">Loading…</p>}
-            {!loading && recalls.length===0 && <p className="text-zinc-500 text-center py-12">No recalls match your filters.</p>}
+          <section className="flex-1 min-w-0" aria-live="polite" aria-busy={loading}>
+            {loading && <p className="text-sm text-zinc-600 mb-3" role="status">Loading…</p>}
+            {!loading && recalls.length===0 && <p className="text-zinc-600 text-center py-12" role="status">No recalls match your filters.</p>}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {recalls.map(r=> <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={isNewRecall(r.recallInitiationDate)} watchlist={watchlist} />)}
             </div>
             <div className="flex items-center justify-between mt-6">
-              <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white">Previous</button>
-              <span className="text-sm text-zinc-600">Page {page+1} / {totalPages} • {total} results</span>
-              <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white">Next</button>
+              <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Previous page">Previous</button>
+              <span className="text-sm text-zinc-600" aria-live="polite">Page {page+1} / {totalPages} • {total} results</span>
+              <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Next page">Next</button>
             </div>
           </section>
         </div>
@@ -94,7 +95,7 @@ export default function App(){
 
       {selected && <RecallDetail recall={selected} onClose={()=>setSelected(null)} />}
 
-      <footer className="border-t bg-white text-xs text-zinc-500 px-4 py-4 text-center">
+      <footer className="border-t bg-white text-xs text-zinc-600 px-4 py-4 text-center">
         Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank">openFDA Food Enforcement API</a> ({import.meta.env.VITE_OPENFDA_KEY ? '240/min with key' : '40/min — set VITE_OPENFDA_KEY for 240/min'}) • Cached 6h • {lastSynced ? `last synced ${new Date(lastSynced).toLocaleDateString()}` : 'no sync yet'} • Mock fallback • Not medical advice.
       </footer>
     </div>
