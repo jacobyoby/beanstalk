@@ -3,7 +3,10 @@ const STORAGE_KEY = 'ponder_watchlist'
 export function getWatchlist(): string[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    return raw ? JSON.parse(raw) : []
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((x: unknown): x is string => typeof x === 'string')
   } catch {
     return []
   }

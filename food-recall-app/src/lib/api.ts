@@ -174,16 +174,27 @@ export async function fetchRecalls(params?: {
   search?: string
   limit?: number
   skip?: number
+  classification?: string
+  status?: string
+  state?: string
 }): Promise<FetchResult> {
   const limit = params?.limit ?? 20
   const skip = params?.skip ?? 0
   const search = params?.search || ''
+  const classification = params?.classification || ''
+  const status = params?.status || ''
+  const state = params?.state || ''
   const apiKey = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_OPENFDA_KEY
-  const cacheKey = `${sanitizeSearchQuery(search)}|${limit}|${skip}`
+  const predicates: string[] = []
+  if (classification) predicates.push(`classification:"${sanitizeSearchQuery(classification)}"`)
+  if (status) predicates.push(`status:"${sanitizeSearchQuery(status)}"`)
+  if (state) predicates.push(`distribution_pattern:"${sanitizeSearchQuery(state)}"`)
+  const searchParam = buildSearchParam(search, predicates)
+  const cacheKey = `${sanitizeSearchQuery(search)}|${classification}|${status}|${state}|${limit}|${skip}`
   const cached = getCache(cacheKey)
   const demo = isDemoMode()
 
-  // Demo mode: explicit, conspicuously fictional data
+  // Demo mode: explicit, conspicuously fictional data — filter before slicing
   if (demo) {
     const q = sanitizeSearchQuery(search).toLowerCase()
     let filtered = mockRecalls.map(r => ({
@@ -196,6 +207,9 @@ export async function fetchRecalls(params?: {
         `${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`.toLowerCase().includes(q)
       )
     }
+    if (classification) filtered = filtered.filter(r => r.classification === classification)
+    if (status) filtered = filtered.filter(r => r.status.toLowerCase() === status.toLowerCase())
+    if (state) filtered = filtered.filter(r => r.distributionPattern.toLowerCase().includes(state.toLowerCase()))
     const total = filtered.length
     const paged = filtered.slice(skip, skip + limit)
     return { recalls: paged, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: true }
@@ -203,7 +217,6 @@ export async function fetchRecalls(params?: {
 
   try {
     let url = `https://api.fda.gov/food/enforcement.json?limit=${limit}&skip=${skip}`
-    const searchParam = buildSearchParam(search)
     if (searchParam) {
       url += `&search=${encodeURIComponent(searchParam)}`
     }
