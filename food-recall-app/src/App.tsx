@@ -102,9 +102,9 @@ export default function App() {
           <div>
             <h1 className="text-2xl font-bold text-zinc-900">Beanstalk</h1>
             <p className="text-sm text-zinc-600">
-              FDA Enforcement Reports (archival) • Sorted by report_date newest first • {isDemo ? 'DEMO — Fictional' : isStale ? 'Stale cached' : error ? `Error: ${error.code}` : 'Live'} • {lastSynced ? `Retrieved ${new Date(lastSynced).toLocaleString()}` : 'No sync yet'} • Key via server proxy (not in bundle)
+              FDA enforcement records • {lastSynced ? `Retrieved ${new Date(lastSynced).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} today` : 'Retrieved — awaiting sync'}
             </p>
-            <p className="text-xs text-zinc-500 mt-1">Source: openFDA Food Enforcement (2004-present). Status is FDA-reported, not verified real-time lifecycle. Not for public safety alerts.</p>
+            <p className="text-xs text-zinc-500 mt-1">Source: openFDA Food Enforcement (2004-present). Status is FDA-reported, not verified real-time lifecycle.</p>
           </div>
           <div className="text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-zinc-700 max-w-sm">
             <strong>FDA scope:</strong> Enforcement archive; status may remain Ongoing after publication. Verify with FDA before action.
@@ -158,7 +158,7 @@ export default function App() {
       {selected && <RecallDetail recall={selected} onClose={()=>setSelected(null)} />}
 
       <footer className="border-t bg-white text-xs text-zinc-600 px-4 py-4 text-center">
-        Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank">openFDA Food Enforcement API</a> (key via server proxy, not in bundle; 40/min anonymously, higher with server env) • {isStale ? `Stale cached from ${lastSynced ? new Date(lastSynced).toLocaleDateString() : 'unknown'}` : lastSynced ? `Last retrieved ${new Date(lastSynced).toLocaleDateString()}` : 'No retrieval yet'} • Live vs cached distinguished per result set • Not medical advice.
+        Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank">openFDA Food Enforcement</a> • FDA scope: Enforcement archive; verify with FDA before action. • Not medical advice.
       </footer>
     </div>
   )

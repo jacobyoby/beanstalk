@@ -56,13 +56,18 @@ export default function RecallDetail({ recall, onClose }: Props) {
           <div><dt className="font-semibold">Voluntary/Mandated</dt><dd>{recall.voluntaryMandated}</dd></div>
         </dl>
         <a
-          href={`https://api.fda.gov/food/enforcement.json?search=recall_number:"${recall.recallNumber}"`}
+          href={`https://www.accessdata.fda.gov/scripts/ires/index.cfm#tabNav_advancedSearch?Product=${
+            encodeURIComponent(recall.productDescription.slice(0, 80))
+          }`}
           target="_blank"
           rel="noreferrer"
           className="mt-6 inline-block text-sm underline text-blue-600 dark:text-blue-400"
         >
-          View raw openFDA record →
+          View on FDA Enforcement Reports →
         </a>
+        <p className="text-xs text-zinc-500 mt-2">
+          Developer: <a href={`https://api.fda.gov/food/enforcement.json?search=recall_number:"${recall.recallNumber}"`} target="_blank" rel="noreferrer" className="underline">raw openFDA JSON</a>
+        </p>
       </div>
     </div>
   )
