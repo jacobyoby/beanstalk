@@ -26,7 +26,10 @@ export default function WatchlistPanel({ items, onAdd, onRemove }: Props) {
       </div>
 
       <form onSubmit={handleSubmit} className="flex gap-2">
+        <label htmlFor="watchlist-input" className="sr-only">Watchlist keyword</label>
         <input
+          id="watchlist-input"
+          aria-label="Watchlist keyword"
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Brand, keyword, allergen…"
