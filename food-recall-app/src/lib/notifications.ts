@@ -8,7 +8,7 @@ export function requestNotificationPermission(): Promise<boolean> {
 export function sendNotification(title: string, body: string): void {
   if (!('Notification' in window) || Notification.permission !== 'granted') return
   try {
-    new Notification(title, { body, icon: '/favicon.ico' })
+    new Notification(title, { body, icon: `${import.meta.env.BASE_URL}icon-192.svg` })
   } catch {
     // Notification constructor can fail in some environments
   }

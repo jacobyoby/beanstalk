@@ -39,7 +39,7 @@ export default function RecallCard({ recall, onSelect, isNew, watchlist }: Props
           <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 font-medium">NEW</span>
         )}
         {isWatched && (
-          <span className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 font-medium">🔔 Watching</span>
+          <span className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 font-medium">Watching</span>
         )}
       </div>
       <h3 className="font-semibold text-sm leading-tight line-clamp-2 dark:text-zinc-100">{recall.productDescription}</h3>

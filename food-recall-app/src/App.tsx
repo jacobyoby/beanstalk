@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import type { Recall, RecallClassification } from './types/recall'
-import { fetchRecalls, getLastSynced, type FetchError } from './lib/api'
+import { fetchRecalls, getLastSynced, isDemoMode, type FetchError } from './lib/api'
 import { matchesWatchlist } from './lib/watchlist'
 import { requestNotificationPermission, sendNotification } from './lib/notifications'
 import RecallCard from './components/RecallCard'
@@ -16,7 +16,7 @@ export default function App() {
   const [total, setTotal] = useState(0)
   const [error, setError] = useState<FetchError | null>(null)
   const [isStale, setIsStale] = useState(false)
-  const [isDemo, setIsDemo] = useState(false)
+  const [isDemo, setIsDemo] = useState(isDemoMode)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
@@ -61,7 +61,7 @@ export default function App() {
           watchlist
         ).length > 0
       )
-      if (watchedRecalls.length > 0 && notificationsEnabled) {
+      if (!demo && watchedRecalls.length > 0 && notificationsEnabled) {
         sendNotification(
           `${watchedRecalls.length} new watched recall${watchedRecalls.length > 1 ? 's' : ''}`,
           watchedRecalls.map(r => r.productDescription.slice(0, 80)).join('\n')
@@ -76,6 +76,7 @@ export default function App() {
   useEffect(() => { setPage(0); load() }, [classification, status, state])
 
   async function enableNotifications() {
+    if (isDemoMode()) return
     const granted = await requestNotificationPermission()
     setNotificationsEnabled(granted)
   }
@@ -88,20 +89,20 @@ export default function App() {
       <header className="sticky top-0 z-10 bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900">🍎 Ponder</h1>
+            <h1 className="text-2xl font-bold text-zinc-900">Beanstalk</h1>
             <p className="text-sm text-zinc-600">
-              Food Recall Alerts {isDemo ? '• DEMO' : error ? `• Error: ${error.message}` : isStale ? '• Stale cache' : '• Live'} {lastSynced ? `• Synced ${new Date(lastSynced).toLocaleString()}` : ''} {import.meta.env.VITE_OPENFDA_KEY ? '• 🔑' : '• no key'}
+              Food recall explorer {isDemo ? '• Fictional demo' : error ? `• Error: ${error.message}` : isStale ? '• Stale cache' : '• Live'} {!isDemo && lastSynced ? `• Synced ${new Date(lastSynced).toLocaleString()}` : ''}
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          {!isDemo && <div className="flex items-center gap-3">
             {!notificationsEnabled ? (
-              <button onClick={enableNotifications} className="px-3 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Enable browser notifications for watched recalls">🔔 Enable Alerts</button>
+              <button onClick={enableNotifications} className="px-3 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Enable browser notifications for watched recalls">Enable alerts</button>
             ) : (
-              <span className="text-xs bg-green-100 text-green-700 border border-green-200 rounded-lg px-3 py-2" role="status">✓ Alerts on</span>
+              <span className="text-xs bg-green-100 text-green-700 border border-green-200 rounded-lg px-3 py-2" role="status">Alerts on</span>
             )}
-          </div>
+          </div>}
         </div>
-        {isDemo && <div className="bg-purple-600 text-white text-center text-sm py-2">DEMO MODE — Fictional data</div>}
+        {isDemo && <div className="bg-zinc-800 text-white text-center text-sm px-4 py-2">Interactive demo. All records and organizations are fictional.</div>}
         {isStale && <div className="bg-amber-600 text-white text-center text-sm py-2">Stale cache — request failed ({error?.code}). <button onClick={load} className="underline">Retry</button></div>}
       </header>
       <main id="main-content" className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
@@ -125,7 +126,7 @@ export default function App() {
             {!loading && !(error && !isStale && recalls.length === 0) && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {recalls.map(r => <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={isNewRecall(r.recallInitiationDate)} watchlist={watchlist} />)}
+                  {recalls.map(r => <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={!isDemo && isNewRecall(r.recallInitiationDate)} watchlist={watchlist} />)}
                 </div>
                 <div className="flex items-center justify-between mt-6">
                   <button disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Previous page">Previous</button>
@@ -137,9 +138,11 @@ export default function App() {
           </section>
         </div>
       </main>
-      {selected && <RecallDetail recall={selected} onClose={() => setSelected(null)} />}
+      {selected && <RecallDetail recall={selected} isDemo={isDemo} onClose={() => setSelected(null)} />}
       <footer className="border-t bg-white text-xs text-zinc-600 px-4 py-4 text-center">
-        Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank">openFDA</a> • Cached 6h • {lastSynced ? `synced ${new Date(lastSynced).toLocaleDateString()}` : 'no sync'} • Not medical advice.
+        {isDemo ? 'Fictional data for interface preview. Do not use this demo to assess food safety.' : <>
+          Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank" rel="noreferrer">openFDA</a> • Cached 6h • {lastSynced ? `synced ${new Date(lastSynced).toLocaleDateString()}` : 'no sync'} • Not medical advice.
+        </>}
       </footer>
     </div>
   )

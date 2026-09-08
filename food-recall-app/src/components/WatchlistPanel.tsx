@@ -21,7 +21,7 @@ export default function WatchlistPanel({ items, onAdd, onRemove }: Props) {
   return (
     <div className="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="font-semibold text-sm dark:text-zinc-100">🔔 Watchlist</h3>
+        <h3 className="font-semibold text-sm dark:text-zinc-100">Watchlist</h3>
         <span className="text-xs text-zinc-500 dark:text-zinc-400">{items.length} term{items.length !== 1 ? 's' : ''}</span>
       </div>
 
@@ -36,7 +36,7 @@ export default function WatchlistPanel({ items, onAdd, onRemove }: Props) {
       </form>
 
       {items.length === 0 && (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">Add keywords to get alerts when matching recalls appear.</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">Add keywords to highlight matching records.</p>
       )}
 
       <div className="flex flex-wrap gap-1.5">

@@ -121,11 +121,12 @@ export function clearCache(): void {
 }
 
 export function isDemoMode(): boolean {
+  // A demo build must remain fictional even when browser storage is unavailable.
+  if (import.meta.env.VITE_DEMO === 'true') return true
   try {
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
     if (params.get('demo') === '1' || params.get('demo') === 'true') return true
     if (localStorage.getItem('ponder:demo') === '1') return true
-    if ((import.meta as unknown as { env: Record<string, string> }).env?.VITE_DEMO === 'true') return true
   } catch {}
   return false
 }
