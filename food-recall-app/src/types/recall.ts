@@ -1,4 +1,4 @@
-export type RecallClassification = 'Class I' | 'Class II' | 'Class III'
+export type RecallClassification = 'Class I' | 'Class II' | 'Class III' | 'Not Yet Classified' | 'Unknown'
 export interface Recall {
   id: string
   recallNumber: string
@@ -17,6 +17,8 @@ export interface Recall {
   codeInfo: string
   moreCodeInfo: string
   voluntaryMandated: string
+  rawClassification?: string
+  rawStatus?: string
   address1: string
   address2: string
   postalCode: string
