@@ -47,9 +47,6 @@ export function sanitizeSearchQuery(query: string): string {
 
 /**
  * Build the cross-field OR clause grouped in parentheses.
- * Returns the raw unencoded clause, e.g. (product_description:"milk" OR reason_for_recall:"milk" OR recalling_firm:"milk")
- * The caller must encode via encodeURIComponent before appending to URL.
- * Quotes and backslashes are stripped; other punctuation (&, #, etc.) is preserved and will be percent-encoded.
  */
 export function buildGroupedSearchClause(search: string): string | null {
   const sanitized = sanitizeSearchQuery(search)
@@ -61,7 +58,6 @@ export function buildGroupedSearchClause(search: string): string | null {
 
 /**
  * Build the full search= value with grouped OR and optional predicates composed outside via AND.
- * Each predicate is ANDed outside the grouped OR per FDA syntax.
  */
 export function buildSearchParam(search: string, predicates: string[] = []): string | null {
   const grouped = buildGroupedSearchClause(search)
@@ -102,12 +98,9 @@ function setCache(cacheKey: string, data: { recalls: Recall[]; total: number }):
     const entries: CacheEntry[] = raw ? JSON.parse(raw) : []
     const filtered = entries.filter(e => e.key !== cacheKey)
     filtered.unshift({ key: cacheKey, data, timestamp: Date.now() })
-    // keep last 20 entries
     localStorage.setItem(CACHE_KEY, JSON.stringify(filtered.slice(0, 20)))
     localStorage.setItem(SYNC_KEY, new Date().toISOString())
-  } catch {
-    // quota exceeded or SSR — ignore
-  }
+  } catch {}
 }
 
 export function getLastSynced(): string | null {
@@ -125,17 +118,88 @@ export function clearCache(): void {
   } catch {}
 }
 
+export function isDemoMode(): boolean {
+  try {
+    const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+    if (params.get('demo') === '1' || params.get('demo') === 'true') return true
+    if (localStorage.getItem('ponder:demo') === '1') return true
+    if ((import.meta as unknown as { env: Record<string, string> }).env?.VITE_DEMO === 'true') return true
+  } catch {}
+  return false
+}
+
+export type FetchError = {
+  code: 'NOT_FOUND' | 'RATE_LIMIT' | 'TIMEOUT' | 'NETWORK' | 'SERVER' | 'BAD_REQUEST' | 'MALFORMED'
+  message: string
+  status?: number
+  retryable: boolean
+}
+
+export type FetchResult = {
+  recalls: Recall[]
+  total: number
+  error: FetchError | null
+  isStale: boolean
+  lastSynced: string | null
+  isDemo: boolean
+}
+
+const FETCH_TIMEOUT_MS = 8000
+
+async function fetchWithTimeout(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    const res = await fetch(url, { signal: controller.signal })
+    return res
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+function parseErrorCode(status: number, body: unknown): FetchError {
+  const msg = typeof body === 'object' && body !== null && 'error' in body
+    ? String((body as { error: { message?: string } }).error.message || '')
+    : ''
+  if (status === 404 && /no matches/i.test(msg)) {
+    return { code: 'NOT_FOUND', message: 'No matches found', status, retryable: false }
+  }
+  if (status === 429) return { code: 'RATE_LIMIT', message: 'Rate limited — retry shortly', status, retryable: true }
+  if (status === 400) return { code: 'BAD_REQUEST', message: msg || 'Bad request', status, retryable: false }
+  if (status >= 500) return { code: 'SERVER', message: msg || `Server error ${status}`, status, retryable: true }
+  return { code: 'SERVER', message: msg || `Request failed ${status}`, status, retryable: status >= 500 || status === 429 }
+}
+
 export async function fetchRecalls(params?: {
   search?: string
   limit?: number
   skip?: number
-}): Promise<{ recalls: Recall[]; total: number; fromMock: boolean; lastSynced: string | null }> {
+}): Promise<FetchResult> {
   const limit = params?.limit ?? 20
   const skip = params?.skip ?? 0
   const search = params?.search || ''
   const apiKey = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_OPENFDA_KEY
   const cacheKey = `${sanitizeSearchQuery(search)}|${limit}|${skip}`
   const cached = getCache(cacheKey)
+  const demo = isDemoMode()
+
+  // Demo mode: explicit, conspicuously fictional data
+  if (demo) {
+    const q = sanitizeSearchQuery(search).toLowerCase()
+    let filtered = mockRecalls.map(r => ({
+      ...r,
+      productDescription: `DEMO — Fictional — ${r.productDescription}`,
+      recallNumber: `DEMO-${r.recallNumber}`,
+    }))
+    if (q) {
+      filtered = filtered.filter(r =>
+        `${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`.toLowerCase().includes(q)
+      )
+    }
+    const total = filtered.length
+    const paged = filtered.slice(skip, skip + limit)
+    return { recalls: paged, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: true }
+  }
 
   try {
     let url = `https://api.fda.gov/food/enforcement.json?limit=${limit}&skip=${skip}`
@@ -145,24 +209,40 @@ export async function fetchRecalls(params?: {
     }
     if (apiKey) url += `&api_key=${encodeURIComponent(apiKey)}`
 
-    const res = await fetch(url)
-    if (!res.ok) throw new Error(`FDA ${res.status}`)
+    const res = await fetchWithTimeout(url)
+    if (!res.ok) {
+      let body: unknown = null
+      try { body = await res.json() } catch { body = null }
+      const err = parseErrorCode(res.status, body)
+      if (err.code === 'NOT_FOUND') {
+        // Genuine empty — not an error, cache empty result
+        setCache(cacheKey, { recalls: [], total: 0 })
+        return { recalls: [], total: 0, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+      }
+      // For retryable errors, return stale cache if available with label
+      if (cached) {
+        return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: getLastSynced(), isDemo: false }
+      }
+      return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+    }
     const data = await res.json()
-    const recalls: Recall[] = (data.results || []).map(mapOpenFDA)
+    if (!data || !Array.isArray(data.results)) {
+      const err: FetchError = { code: 'MALFORMED', message: 'Malformed FDA response', retryable: true }
+      if (cached) return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: getLastSynced(), isDemo: false }
+      return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+    }
+    const recalls: Recall[] = data.results.map(mapOpenFDA)
     const total = data.meta?.results?.total ?? recalls.length
     setCache(cacheKey, { recalls, total })
-    return { recalls, total, fromMock: false, lastSynced: getLastSynced() }
-  } catch {
-    if (cached) return { recalls: cached.recalls, total: cached.total, fromMock: false, lastSynced: getLastSynced() }
-    const q = sanitizeSearchQuery(search).toLowerCase()
-    let filtered = mockRecalls
-    if (q) {
-      filtered = filtered.filter(r =>
-        `${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`.toLowerCase().includes(q)
-      )
+    return { recalls, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+  } catch (e: unknown) {
+    const isAbort = e instanceof DOMException && e.name === 'AbortError'
+    const err: FetchError = isAbort
+      ? { code: 'TIMEOUT', message: 'Request timed out', retryable: true }
+      : { code: 'NETWORK', message: e instanceof Error ? e.message : 'Network error', retryable: true }
+    if (cached) {
+      return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: getLastSynced(), isDemo: false }
     }
-    const total = filtered.length
-    const paged = filtered.slice(skip, skip + limit)
-    return { recalls: paged, total, fromMock: true, lastSynced: getLastSynced() }
+    return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
   }
 }
