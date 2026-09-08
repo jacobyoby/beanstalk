@@ -4,7 +4,7 @@ Explore FDA food recall records by product, company, and recall reason.
 
 Beanstalk brings recall descriptions, reported classifications, distribution text, and source links into a searchable browser interface. It is an early-stage research tool, with **v0.1 in development**.
 
-[Roadmap](https://github.com/jacobyoby/ponder/issues/24) · [v0.1 milestone](https://github.com/jacobyoby/ponder/milestone/1) · [Report an issue](https://github.com/jacobyoby/ponder/issues/new/choose) · [FDA data source](https://open.fda.gov/apis/food/enforcement/)
+[Roadmap](https://github.com/jacobyoby/beanstalk/issues/24) · [v0.1 milestone](https://github.com/jacobyoby/beanstalk/milestone/1) · [Report an issue](https://github.com/jacobyoby/beanstalk/issues/new/choose) · [FDA data source](https://open.fda.gov/apis/food/enforcement/)
 
 ## Explore the records
 
@@ -12,7 +12,7 @@ Beanstalk brings recall descriptions, reported classifications, distribution tex
 - Inspect reported classifications, status, distribution, and available lot information.
 - Open the underlying FDA record from the detail view.
 
-The application lives in [`food-recall-app/`](food-recall-app/). The repository is still named `ponder`; Beanstalk is the product name.
+The application lives in [`food-recall-app/`](food-recall-app/). The repository and product are both named Beanstalk.
 
 ## Building toward v0.1
 
@@ -24,15 +24,15 @@ The application lives in [`food-recall-app/`](food-recall-app/). The repository 
 | Accessible use | Keyboard-operable details, readable phone layouts, and consistent Beanstalk branding without emojis. |
 | Release readiness | Server-side API-key handling, meaningful regression checks, and a verified deployment procedure. |
 
-The [milestone](https://github.com/jacobyoby/ponder/milestone/1) is the current source of completion status. Distribution-state and dietary-concern matching are release goals, not assurances that a product is safe or suitable for a particular diet.
+The [milestone](https://github.com/jacobyoby/beanstalk/milestone/1) is the current source of completion status. Distribution-state and dietary-concern matching are release goals, not assurances that a product is safe or suitable for a particular diet.
 
 ## Run locally
 
 Use **Node.js 22.22.2 or later in the 22.x line** and npm. CI uses Node 22; the locked test dependencies require a recent patch release.
 
 ```sh
-git clone https://github.com/jacobyoby/ponder.git
-cd ponder/food-recall-app
+git clone https://github.com/jacobyoby/beanstalk.git
+cd beanstalk/food-recall-app
 npm ci
 npm run dev
 ```
@@ -57,4 +57,4 @@ This development version has known result, provenance, and accessibility limitat
 
 ## Contribute
 
-Choose a scoped item from the [v0.1 roadmap](https://github.com/jacobyoby/ponder/issues/24). Include a reproducible case, expected behavior, and tests for the change. Data reports should identify the FDA record and the field that differs; omit private information and credentials.
+Choose a scoped item from the [v0.1 roadmap](https://github.com/jacobyoby/beanstalk/issues/24). Include a reproducible case, expected behavior, and tests for the change. Data reports should identify the FDA record and the field that differs; omit private information and credentials.
