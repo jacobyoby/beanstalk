@@ -6,6 +6,8 @@ import RecallCard from './components/RecallCard'
 import RecallDetail from './components/RecallDetail'
 import SearchBar from './components/SearchBar'
 import FilterPanel from './components/FilterPanel'
+import { isNewRecall } from './lib/formatDate'
+import { useWatchlist } from './hooks/useWatchlist'
 
 export default function App(){
   const [recalls,setRecalls]=useState<Recall[]>(mockRecalls)
@@ -16,8 +18,10 @@ export default function App(){
   const [debounced,setDebounced]=useState('')
   const [classification,setClassification]=useState<RecallClassification|''>('')
   const [status,setStatus]=useState('')
+  const [state,setState]=useState('')
   const [selected,setSelected]=useState<Recall|null>(null)
   const [page,setPage]=useState(0)
+  const { items: watchlist } = useWatchlist()
   const limit=6
 
   useEffect(()=>{ const t=setTimeout(()=>setDebounced(query),400); return ()=>clearTimeout(t)},[query])
@@ -30,13 +34,14 @@ export default function App(){
     let filtered=data
     if(classification) filtered=filtered.filter(r=>r.classification===classification)
     if(status) filtered=filtered.filter(r=>r.status.toLowerCase()===status.toLowerCase())
+    if(state) filtered=filtered.filter(r=>r.state.toLowerCase()===state.toLowerCase())
     setRecalls(filtered)
     setTotal(t)
     setFromMock(fm)
     setLoading(false)
   }
   useEffect(()=>{ load() },[debounced, page])
-  useEffect(()=>{ setPage(0); load() },[classification, status])
+  useEffect(()=>{ setPage(0); load() },[classification, status, state])
 
   const totalPages = Math.max(1, Math.ceil(total/limit))
 
@@ -60,7 +65,7 @@ export default function App(){
           <aside className="lg:w-64 shrink-0">
             <div className="lg:sticky lg:top-[88px] space-y-4">
               <SearchBar value={query} onChange={setQuery} />
-              <FilterPanel classification={classification} status={status} onClassification={setClassification} onStatus={setStatus} onClear={()=>{setClassification('');setStatus('');setQuery('')}} />
+              <FilterPanel classification={classification} status={status} state={state} onClassification={setClassification} onStatus={setStatus} onState={setState} onClear={()=>{setClassification('');setStatus('');setState('');setQuery('')}} />
               <div className="text-xs text-zinc-500 bg-zinc-100 rounded-lg p-3">
                 <p className="font-semibold">Classification</p>
                 <p>Class I = reasonable probability of serious harm. ~70% of 2025 recalls.</p>
@@ -73,7 +78,7 @@ export default function App(){
             {loading && <p className="text-sm text-zinc-500 mb-3">Loading…</p>}
             {!loading && recalls.length===0 && <p className="text-zinc-500 text-center py-12">No recalls match your filters.</p>}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {recalls.map(r=> <RecallCard key={r.id} recall={r} onSelect={setSelected} />)}
+              {recalls.map(r=> <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={isNewRecall(r.recallInitiationDate)} watchlist={watchlist} />)}
             </div>
             <div className="flex items-center justify-between mt-6">
               <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white">Previous</button>

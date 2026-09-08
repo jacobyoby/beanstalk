@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: FDA CORE Investigations Dashboard
+    url: https://www.fda.gov/safety/recalls-market-withdrawals-safety-alerts
+    about: Check if recall is already tracked by FDA before filing a recall-data issue
+  - name: Discussions / Q&A
+    url: https://github.com/jacobyoby/ponder/discussions
+    about: Ask questions or propose ideas informally
