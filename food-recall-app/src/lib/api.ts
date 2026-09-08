@@ -19,6 +19,13 @@ interface OpenFDARecord {
   code_info?: string
   more_code_info?: string
   voluntary_mandated?: string
+  address_1?: string
+  address_2?: string
+  postal_code?: string
+  center_classification_date?: string
+  initial_firm_notification?: string
+  product_quantity?: string
+  termination_date?: string
 }
 
 function mapOpenFDA(r: OpenFDARecord): Recall {
@@ -40,11 +47,54 @@ function mapOpenFDA(r: OpenFDARecord): Recall {
     codeInfo: r.code_info || '',
     moreCodeInfo: r.more_code_info || '',
     voluntaryMandated: r.voluntary_mandated || '',
+    address1: r.address_1 || '',
+    address2: r.address_2 || '',
+    postalCode: r.postal_code || '',
+    centerClassificationDate: r.center_classification_date || '',
+    initialFirmNotification: r.initial_firm_notification || '',
+    productQuantity: r.product_quantity || '',
+    terminationDate: r.termination_date || '',
   }
 }
 
 export function sanitizeSearchQuery(query: string): string {
   return query.replace(/["\\]/g, '').trim()
+}
+
+const STATE_NAMES: Record<string, string> = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+}
+
+export function matchesDistributionPattern(distributionPattern: string, selectedState: string): boolean {
+  if (!selectedState) return true
+  const pattern = distributionPattern.toLowerCase()
+  if (!pattern || pattern.trim() === '') return false // unclear, not matching specific state
+  // Nationwide is potentially relevant to any state
+  if (pattern.includes('nationwide') || pattern.includes('national distribution') || pattern.includes('nationwide -')) {
+    return true
+  }
+  if (selectedState === 'Nationwide') {
+    return pattern.includes('nationwide') || pattern.includes('national')
+  }
+  // Bounded abbreviation match: \bCA\b etc. (case-sensitive for abbreviations to avoid matching English words like "in" for IN)
+  const abbr = selectedState
+  const full = STATE_NAMES[selectedState] || ''
+  const abbrRegex = new RegExp(`\\b${abbr}\\b`)
+  if (abbrRegex.test(distributionPattern)) return true
+  if (full && new RegExp(`\\b${full}\\b`, 'i').test(distributionPattern)) return true
+  return false
+}
+
+export function isDistributionUnclear(distributionPattern: string): boolean {
+  const p = distributionPattern.trim().toLowerCase()
+  if (!p) return true
+  if (p === 'n/a' || p === 'unknown' || p.includes('direct to consumer') || p.includes('retail only')) {
+    // Consider ambiguous/region-only as unclear if no state abbreviation or nationwide present
+    const hasState = Object.keys(STATE_NAMES).some(abbr => new RegExp(`\\b${abbr}\\b`, 'i').test(distributionPattern) || new RegExp(`\\b${STATE_NAMES[abbr]}\\b`, 'i').test(distributionPattern))
+    const hasNationwide = p.includes('nationwide') || p.includes('national')
+    return !hasState && !hasNationwide
+  }
+  return false
 }
 
 /**
@@ -200,7 +250,14 @@ export async function fetchRecalls(params?: {
   const predicates: string[] = []
   if (classification) predicates.push(`classification:"${sanitizeSearchQuery(classification)}"`)
   if (status) predicates.push(`status:"${sanitizeSearchQuery(status)}"`)
-  if (state) predicates.push(`distribution_pattern:"${sanitizeSearchQuery(state)}"`)
+  if (state) {
+    if (state === 'Nationwide') {
+      predicates.push(`distribution_pattern:"Nationwide"`)
+    } else {
+      // Include nationwide as potentially relevant to any state
+      predicates.push(`(distribution_pattern:"${sanitizeSearchQuery(state)}" OR distribution_pattern:"Nationwide" OR distribution_pattern:"national")`)
+    }
+  }
   const searchParam = buildSearchParam(search, predicates)
   const cacheKey = `${sanitizeSearchQuery(search)}|${classification}|${status}|${state}|${limit}|${skip}`
   const cachedEntry = getCacheEntry(cacheKey)
@@ -222,7 +279,7 @@ export async function fetchRecalls(params?: {
     }
     if (classification) filtered = filtered.filter(r => r.classification === classification)
     if (status) filtered = filtered.filter(r => r.status.toLowerCase() === status.toLowerCase())
-    if (state) filtered = filtered.filter(r => r.distributionPattern.toLowerCase().includes(state.toLowerCase()))
+    if (state) filtered = filtered.filter(r => matchesDistributionPattern(r.distributionPattern, state))
     const total = filtered.length
     const paged = filtered.slice(skip, skip + limit)
     return { recalls: paged, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: true }
