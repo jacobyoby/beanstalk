@@ -26,7 +26,7 @@ Hosted builds ignore environment files and public shell variables, so an owner c
 
 The `Beanstalk Pages` workflow tests and builds pull requests. Only a push or manual workflow run on `main` can publish. Every deployment includes `build-info.json` with the source commit and data mode. Branch protection continues to control which changes reach main.
 
-For workflow deployment, GitHub Pages must use **GitHub Actions** as its source and the `github-pages` environment must permit `main`. Until the hosting PR is merged and this handover is enabled, Pages serves the manually published compiled artifact on `gh-pages`. Do not describe the continuous workflow as active until its first deployment succeeds.
+The `github-pages` deployment environment permits `main` and the existing `gh-pages` artifact branch. GitHub gives that environment policy precedence over the legacy source-branch rule, allowing the main workflow to deploy once this hosting PR merges. Pages currently serves the manually published artifact; do not describe continuous deployment as active until the first main workflow succeeds. After that handover, the Pages settings can use GitHub Actions as their publishing source.
 
 For a manual publication, test and build a clean source revision, copy only `dist/` into a clean `gh-pages` checkout, retain `.nojekyll`, and record the source revision in `build-info.json` with `mode: "pages"` and `fictionalData: false`. Commit and push the artifact, then wait for Pages deployment.
 

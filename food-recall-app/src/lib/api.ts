@@ -29,32 +29,63 @@ interface OpenFDARecord {
   termination_date?: string
 }
 
-function mapOpenFDA(r: OpenFDARecord): Recall {
+const KNOWN_CLASSIFICATIONS = new Set(['Class I', 'Class II', 'Class III', 'Not Yet Classified'])
+
+function normalizeClassification(raw?: string): RecallClassification {
+  if (!raw || typeof raw !== 'string') return 'Unknown'
+  const trimmed = raw.trim()
+  if (KNOWN_CLASSIFICATIONS.has(trimmed)) return trimmed as RecallClassification
+  if (trimmed === '') return 'Unknown'
+  return 'Unknown'
+}
+
+function normalizeStatus(raw?: string): string {
+  if (!raw || typeof raw !== 'string' || raw.trim() === '') return 'Unknown'
+  return raw.trim()
+}
+
+function stableId(r: OpenFDARecord): string {
+  if (r.recall_number) return r.recall_number
+  if (r.event_id) return r.event_id
+  // Fallback: deterministic hash from firm + product + reason
+  const key = `${r.recalling_firm || ''}|${r.product_description || ''}|${r.reason_for_recall || ''}`
+  let hash = 0
+  for (let i = 0; i < key.length; i++) { hash = ((hash << 5) - hash) + key.charCodeAt(i); hash |= 0 }
+  return `gen-${Math.abs(hash).toString(36)}`
+}
+
+function mapOpenFDA(r: OpenFDARecord): Recall | null {
+  if (!r || typeof r !== 'object') return null
+  // Preserve missing as unknown, do not invent
+  const rawClassification = typeof r.classification === 'string' ? r.classification : undefined
+  const rawStatus = typeof r.status === 'string' ? r.status : undefined
   return {
-    id: r.recall_number || r.event_id || Math.random().toString(36).slice(2),
-    recallNumber: r.recall_number || '',
-    eventId: r.event_id || '',
-    productDescription: r.product_description || '',
-    reasonForRecall: r.reason_for_recall || '',
-    classification: r.classification || 'Class II',
-    status: r.status || 'Ongoing',
-    distributionPattern: r.distribution_pattern || '',
-    recallingFirm: r.recalling_firm || '',
-    city: r.city || '',
-    state: r.state || '',
-    country: r.country || 'United States',
-    recallInitiationDate: r.recall_initiation_date || r.report_date || '',
-    productType: r.product_type || 'Food',
-    codeInfo: r.code_info || '',
-    moreCodeInfo: r.more_code_info || '',
-    voluntaryMandated: r.voluntary_mandated || '',
-    address1: r.address_1 || '',
-    address2: r.address_2 || '',
-    postalCode: r.postal_code || '',
-    centerClassificationDate: r.center_classification_date || '',
-    initialFirmNotification: r.initial_firm_notification || '',
-    productQuantity: r.product_quantity || '',
-    terminationDate: r.termination_date || '',
+    id: stableId(r),
+    recallNumber: typeof r.recall_number === 'string' ? r.recall_number : '',
+    eventId: typeof r.event_id === 'string' ? r.event_id : '',
+    productDescription: typeof r.product_description === 'string' ? r.product_description : '',
+    reasonForRecall: typeof r.reason_for_recall === 'string' ? r.reason_for_recall : '',
+    classification: normalizeClassification(rawClassification),
+    status: normalizeStatus(rawStatus),
+    distributionPattern: typeof r.distribution_pattern === 'string' ? r.distribution_pattern : '',
+    recallingFirm: typeof r.recalling_firm === 'string' ? r.recalling_firm : '',
+    city: typeof r.city === 'string' ? r.city : '',
+    state: typeof r.state === 'string' ? r.state : '',
+    country: typeof r.country === 'string' ? r.country : '',
+    recallInitiationDate: typeof r.recall_initiation_date === 'string' ? r.recall_initiation_date : (typeof r.report_date === 'string' ? r.report_date : ''),
+    productType: typeof r.product_type === 'string' ? r.product_type : '',
+    codeInfo: typeof r.code_info === 'string' ? r.code_info : '',
+    moreCodeInfo: typeof r.more_code_info === 'string' ? r.more_code_info : '',
+    voluntaryMandated: typeof r.voluntary_mandated === 'string' ? r.voluntary_mandated : '',
+    rawClassification,
+    rawStatus,
+    address1: typeof r.address_1 === 'string' ? r.address_1 : '',
+    address2: typeof r.address_2 === 'string' ? r.address_2 : '',
+    postalCode: typeof r.postal_code === 'string' ? r.postal_code : '',
+    centerClassificationDate: typeof r.center_classification_date === 'string' ? r.center_classification_date : '',
+    initialFirmNotification: typeof r.initial_firm_notification === 'string' ? r.initial_firm_notification : '',
+    productQuantity: typeof r.product_quantity === 'string' ? r.product_quantity : '',
+    terminationDate: typeof r.termination_date === 'string' ? r.termination_date : '',
   }
 }
 
@@ -266,7 +297,12 @@ export async function fetchRecalls(params?: {
   }
   const searchParam = buildSearchParam(search, predicates)
   const dietaryKey = (dietary as string[]).join(',')
-  const cacheKey = `${sanitizeSearchQuery(search)}|${classification}|${status}|${state}|${dietaryKey}|${limit}|${skip}`
+  const cappedSkip = Math.min(skip, 25000)
+  if (cappedSkip !== skip) {
+    // Offset beyond FDA limit — return empty with truncated window info, do not request
+    return { recalls: [], total: 0, error: { code: 'BAD_REQUEST', message: 'Skip exceeds FDA limit 25,000 — narrow filters', status: 400, retryable: false }, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+  }
+  const cacheKey = `${sanitizeSearchQuery(search)}|${classification}|${status}|${state}|${dietaryKey}|${limit}|${cappedSkip}`
   const cachedEntry = getCacheEntry(cacheKey)
   const cached = cachedEntry?.data ?? null
   const demo = isDemoMode()
@@ -289,7 +325,7 @@ export async function fetchRecalls(params?: {
     if (state) filtered = filtered.filter(r => matchesDistributionPattern(r.distributionPattern, state))
     if (dietary.length > 0) filtered = filtered.filter(r => matchesDietaryConcerns(r, dietary as DietaryConcern[]))
     const total = filtered.length
-    const paged = filtered.slice(skip, skip + limit)
+    const paged = filtered.slice(cappedSkip, cappedSkip + limit)
     return { recalls: paged, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: true }
   }
 
@@ -303,7 +339,7 @@ export async function fetchRecalls(params?: {
     // GitHub Pages has no server endpoint; use openFDA's public CORS API directly.
     const useProxy = isBrowser && import.meta.env.MODE !== 'pages'
     const proxyBase = useProxy ? `${window.location.origin}/api/food/enforcement.json` : directBase
-    let url = `${proxyBase}?limit=${limit}&skip=${skip}&sort=report_date:desc`
+    let url = `${proxyBase}?limit=${limit}&skip=${cappedSkip}&sort=report_date:desc`
     if (searchParam) {
       url += `&search=${encodeURIComponent(searchParam)}`
     }
@@ -313,12 +349,12 @@ export async function fetchRecalls(params?: {
     try {
       res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS, params?.signal)
       if (!res.ok && res.status === 404 && proxyBase !== directBase && isBrowser) {
-        const directUrl = `${directBase}?limit=${limit}&skip=${skip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ''}`
+        const directUrl = `${directBase}?limit=${limit}&skip=${cappedSkip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ''}`
         res = await fetchWithTimeout(directUrl, FETCH_TIMEOUT_MS, params?.signal)
       }
     } catch (e) {
       if (isBrowser && proxyBase !== directBase && !(e instanceof DOMException && (e as DOMException).name === 'AbortError')) {
-        const directUrl = `${directBase}?limit=${limit}&skip=${skip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ''}`
+        const directUrl = `${directBase}?limit=${limit}&skip=${cappedSkip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ''}`
         res = await fetchWithTimeout(directUrl, FETCH_TIMEOUT_MS, params?.signal)
       } else {
         throw e
@@ -339,14 +375,28 @@ export async function fetchRecalls(params?: {
       }
       return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
     }
-    const data = await res.json()
-    if (!data || !Array.isArray(data.results)) {
-      const err: FetchError = { code: 'MALFORMED', message: 'Malformed FDA response', retryable: true }
+    const raw = await res.json()
+    if (!raw || typeof raw !== 'object' || !Array.isArray((raw as any).results)) {
+      const err: FetchError = { code: 'MALFORMED', message: 'Malformed FDA response: missing results array', retryable: true }
       if (cached && cachedEntry) return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
       return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
     }
-    const recalls: Recall[] = data.results.map(mapOpenFDA)
-    const total = data.meta?.results?.total ?? recalls.length
+    const data = raw as { results: unknown[]; meta?: { results?: { total?: unknown; skip?: unknown; limit?: unknown } } }
+    // Validate pagination meta types when present
+    if (data.meta?.results) {
+      const m = data.meta.results
+      if ((m.total !== undefined && typeof m.total !== 'number') || (m.skip !== undefined && typeof m.skip !== 'number') || (m.limit !== undefined && typeof m.limit !== 'number')) {
+        const err: FetchError = { code: 'MALFORMED', message: 'Malformed FDA response: invalid pagination meta', retryable: true }
+        if (cached && cachedEntry) return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
+        return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+      }
+    }
+    const mapped = (data.results as OpenFDARecord[]).map(mapOpenFDA).filter((r): r is Recall => r !== null)
+    // Deduplicate by id, keep first
+    const seen = new Set<string>()
+    const recalls: Recall[] = []
+    for (const r of mapped) { if (!seen.has(r.id)) { seen.add(r.id); recalls.push(r) } }
+    const total = typeof data.meta?.results?.total === 'number' ? data.meta.results.total : recalls.length
     setCache(cacheKey, { recalls, total })
     return { recalls, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: false }
   } catch (e: unknown) {
