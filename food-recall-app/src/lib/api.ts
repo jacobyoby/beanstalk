@@ -249,7 +249,6 @@ export async function fetchRecalls(params?: {
   const status = params?.status || ''
   const state = params?.state || ''
   const dietary = params?.dietary || []
-  const apiKey = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_OPENFDA_KEY
   const predicates: string[] = []
   if (classification) predicates.push(`classification:"${sanitizeSearchQuery(classification)}"`)
   if (status) predicates.push(`status:"${sanitizeSearchQuery(status)}"`)
@@ -298,13 +297,30 @@ export async function fetchRecalls(params?: {
       const err: FetchError = { code: 'NETWORK', message: 'Aborted', retryable: false }
       return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
     }
-    let url = `https://api.fda.gov/food/enforcement.json?limit=${limit}&skip=${skip}&sort=report_date:desc`
+    const isBrowser = typeof window !== 'undefined' && window.location.origin !== 'null'
+    const proxyBase = isBrowser ? `${window.location.origin}/api/food/enforcement.json` : 'https://api.fda.gov/food/enforcement.json'
+    const directBase = 'https://api.fda.gov/food/enforcement.json'
+    let url = `${proxyBase}?limit=${limit}&skip=${skip}&sort=report_date:desc`
     if (searchParam) {
       url += `&search=${encodeURIComponent(searchParam)}`
     }
-    if (apiKey) url += `&api_key=${encodeURIComponent(apiKey)}`
+    // No api_key in client bundle; server proxy injects OPENFDA_API_KEY when available
 
-    const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS, params?.signal)
+    let res: Response
+    try {
+      res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS, params?.signal)
+      if (!res.ok && res.status === 404 && proxyBase !== directBase && isBrowser) {
+        const directUrl = `${directBase}?limit=${limit}&skip=${skip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ''}`
+        res = await fetchWithTimeout(directUrl, FETCH_TIMEOUT_MS, params?.signal)
+      }
+    } catch (e) {
+      if (isBrowser && proxyBase !== directBase && !(e instanceof DOMException && (e as DOMException).name === 'AbortError')) {
+        const directUrl = `${directBase}?limit=${limit}&skip=${skip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ''}`
+        res = await fetchWithTimeout(directUrl, FETCH_TIMEOUT_MS, params?.signal)
+      } else {
+        throw e
+      }
+    }
     if (!res.ok) {
       let body: unknown = null
       try { body = await res.json() } catch { body = null }
