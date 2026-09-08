@@ -10,6 +10,7 @@ import FilterPanel from './components/FilterPanel'
 import WatchlistPanel from './components/WatchlistPanel'
 import { isNewRecall } from './lib/formatDate'
 import { useWatchlist } from './hooks/useWatchlist'
+import { useDarkMode } from './hooks/useDarkMode'
 import { getDietaryMatches, type DietaryConcern } from './lib/dietary'
 
 export default function App() {
@@ -30,6 +31,7 @@ export default function App() {
   const [lastSynced, setLastSynced] = useState<string | null>(getLastSynced())
   const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   const { items: watchlist, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist()
+  const { dark, toggle: toggleDark } = useDarkMode()
   const seenIdsRef = useRef<Set<string>>(new Set())
   const firstLoadRef = useRef(true)
   const requestIdRef = useRef(0)
@@ -106,8 +108,11 @@ export default function App() {
             </p>
             <p className="text-xs text-zinc-500 mt-1">Source: openFDA Food Enforcement (2004-present). Status is FDA-reported, not verified real-time lifecycle.</p>
           </div>
-          <div className="text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-zinc-700 max-w-sm">
-            <strong>FDA scope:</strong> Enforcement archive; status may remain Ongoing after publication. Verify with FDA before action.
+          <div className="flex items-center gap-2">
+            <div className="text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-zinc-700 max-w-sm">
+              <strong>FDA scope:</strong> Enforcement archive; status may remain Ongoing after publication. Verify with FDA before action.
+            </div>
+            <button onClick={toggleDark} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} className="px-3 py-2 border rounded-lg text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px]">{dark ? 'Light' : 'Dark'} mode</button>
           </div>
         </div>
         {isDemo && <div className="bg-purple-600 text-white text-center text-sm py-2">DEMO MODE — Fictional data, not real FDA recalls. Add ?demo=1 to URL.</div>}

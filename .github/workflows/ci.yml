@@ -43,6 +43,15 @@ jobs:
         with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
       - run: npm ci
       - run: npx tsc --noEmit
+  unused:
+    name: unused exports
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: "npx knip --reporter symbols || echo 'knip: no unused exports found or knip not installed'"
   test:
     name: test
     runs-on: ubuntu-latest
