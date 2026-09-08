@@ -30,55 +30,51 @@ export default function App() {
   const { items: watchlist, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist()
   const seenIdsRef = useRef<Set<string>>(new Set())
   const firstLoadRef = useRef(true)
+  const requestIdRef = useRef(0)
+  const abortRef = useRef<AbortController | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
+  const triggerReload = () => setReloadKey(k => k + 1)
   const limit = 6
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebounced(query), 400)
-    return () => clearTimeout(t)
-  }, [query])
+  useEffect(() => { const t = setTimeout(() => setDebounced(query), 400); return () => clearTimeout(t) }, [query])
 
-  async function load() {
+  useEffect(() => {
+    setPage(prev => (prev !== 0 ? 0 : prev))
+  }, [classification, status, state, debounced])
+
+  useEffect(() => {
+    const requestId = ++requestIdRef.current
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     setLoading(true)
     setError(null)
-    const { recalls: data, total: t, error: err, isStale: stale, isDemo: demo } = await fetchRecalls({ search: debounced, limit, skip: page * limit })
-    let filtered = data
-    if (classification) filtered = filtered.filter(r => r.classification === classification)
-    if (status) filtered = filtered.filter(r => r.status.toLowerCase() === status.toLowerCase())
-    if (state) filtered = filtered.filter(r => r.state.toLowerCase() === state.toLowerCase())
-    setRecalls(filtered)
-    setTotal(t)
-    setError(err)
-    setIsStale(stale)
-    setIsDemo(demo)
-    setLastSynced(getLastSynced())
-    setLoading(false)
-
-    const newRecalls = filtered.filter(r => !seenIdsRef.current.has(r.id))
-    if (newRecalls.length > 0 && !firstLoadRef.current) {
-      const watchedRecalls = newRecalls.filter(r =>
-        matchesWatchlist(
-          `${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`,
-          watchlist
-        ).length > 0
-      )
-      if (watchedRecalls.length > 0 && notificationsEnabled) {
-        sendNotification(
-          `${watchedRecalls.length} new watched recall${watchedRecalls.length > 1 ? 's' : ''}`,
-          watchedRecalls.map(r => r.productDescription.slice(0, 80)).join('\n')
-        )
+    fetchRecalls({ search: debounced, limit, skip: page * limit, classification, status, state, signal: controller.signal }).then(({ recalls: data, total: t, error: err, isStale: stale, isDemo: demo }) => {
+      if (requestId !== requestIdRef.current) return
+      if (controller.signal.aborted) return
+      setRecalls(data)
+      setTotal(t)
+      setError(err)
+      setIsStale(stale)
+      setIsDemo(demo)
+      setLastSynced(getLastSynced())
+      setLoading(false)
+      // Notifications: only for newly observed, not for stale/demo/outbreak
+      const newRecalls = data.filter(r => !seenIdsRef.current.has(r.id))
+      if (newRecalls.length > 0 && !firstLoadRef.current && !stale && !demo && !err) {
+        const watched = newRecalls.filter(r => matchesWatchlist(`${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`, watchlist).length > 0)
+        if (watched.length > 0 && notificationsEnabled) {
+          sendNotification(`${watched.length} newly observed recall${watched.length > 1 ? 's' : ''} matching watchlist`, watched.map(r => r.productDescription.slice(0, 80)).join('\n'))
+        }
       }
-    }
-    filtered.forEach(r => seenIdsRef.current.add(r.id))
-    firstLoadRef.current = false
-  }
-
-  useEffect(() => { load() }, [debounced, page])
-  useEffect(() => { setPage(0); load() }, [classification, status, state])
-
-  async function enableNotifications() {
-    const granted = await requestNotificationPermission()
-    setNotificationsEnabled(granted)
-  }
+      data.forEach(r => seenIdsRef.current.add(r.id))
+      firstLoadRef.current = false
+    }).catch(() => {
+      if (requestId !== requestIdRef.current) return
+      setLoading(false)
+    })
+    return () => controller.abort()
+  }, [debounced, page, classification, status, state, reloadKey, watchlist, notificationsEnabled])
 
   const totalPages = Math.max(1, Math.ceil(total / limit))
 
@@ -88,58 +84,64 @@ export default function App() {
       <header className="sticky top-0 z-10 bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900">🍎 Ponder</h1>
+            <h1 className="text-2xl font-bold text-zinc-900">Food Recall Tracker</h1>
             <p className="text-sm text-zinc-600">
-              Food Recall Alerts {isDemo ? '• DEMO' : error ? `• Error: ${error.message}` : isStale ? '• Stale cache' : '• Live'} {lastSynced ? `• Synced ${new Date(lastSynced).toLocaleString()}` : ''} {import.meta.env.VITE_OPENFDA_KEY ? '• 🔑' : '• no key'}
+              FDA Enforcement Reports (archival) • Sorted by report_date newest first • {isDemo ? 'DEMO — Fictional' : isStale ? 'Stale cached' : error ? `Error: ${error.code}` : 'Live'} • {lastSynced ? `Retrieved ${new Date(lastSynced).toLocaleString()}` : 'No sync yet'} {import.meta.env.VITE_OPENFDA_KEY ? '• 🔑 key' : '• no key (40/min)'}
             </p>
+            <p className="text-xs text-zinc-500 mt-1">Source: openFDA Food Enforcement (2004-present). Status is FDA-reported, not verified real-time lifecycle. Not for public safety alerts.</p>
           </div>
-          <div className="flex items-center gap-3">
-            {!notificationsEnabled ? (
-              <button onClick={enableNotifications} className="px-3 py-2 bg-amber-500 text-white rounded-lg text-sm font-medium hover:bg-amber-600 transition focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Enable browser notifications for watched recalls">🔔 Enable Alerts</button>
-            ) : (
-              <span className="text-xs bg-green-100 text-green-700 border border-green-200 rounded-lg px-3 py-2" role="status">✓ Alerts on</span>
-            )}
+          <div className="text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-zinc-700 max-w-sm">
+            <strong>FDA scope:</strong> Enforcement archive; status may remain Ongoing after publication. Verify with FDA before action.
           </div>
         </div>
-        {isDemo && <div className="bg-purple-600 text-white text-center text-sm py-2">DEMO MODE — Fictional data</div>}
-        {isStale && <div className="bg-amber-600 text-white text-center text-sm py-2">Stale cache — request failed ({error?.code}). <button onClick={load} className="underline">Retry</button></div>}
+        {isDemo && <div className="bg-purple-600 text-white text-center text-sm py-2">DEMO MODE — Fictional data, not real FDA recalls. Add ?demo=1 to URL.</div>}
+        {isStale && <div className="bg-amber-600 text-white text-center text-sm py-2">Stale cached data — live FDA request failed ({error?.code}). <button onClick={triggerReload} className="underline">Retry</button> <span className="opacity-80">• Cached from {lastSynced ? new Date(lastSynced).toLocaleString() : 'unknown'}</span></div>}
       </header>
+
       <main id="main-content" className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
         <div className="flex flex-col lg:flex-row gap-6">
           <aside className="lg:w-64 shrink-0">
             <div className="lg:sticky lg:top-[88px] space-y-4">
               <SearchBar value={query} onChange={setQuery} />
-              <FilterPanel classification={classification} status={status} state={state} onClassification={setClassification} onStatus={setStatus} onState={setState} onClear={() => { setClassification(''); setStatus(''); setState(''); setQuery('') }} />
+              <FilterPanel classification={classification} status={status} state={state} onClassification={setClassification} onStatus={setStatus} onState={setState} onClear={()=>{setClassification('');setStatus('');setState('');setQuery('')}} />
               <WatchlistPanel items={watchlist} onAdd={addToWatchlist} onRemove={removeFromWatchlist} />
+              <div className="text-xs text-zinc-600 bg-zinc-100 rounded-lg p-3">
+                <p className="font-semibold">Classification</p>
+                <p>Class I = reasonable probability of serious adverse health consequences (21 CFR 7.3). Displayed per FDA record.</p>
+              </div>
             </div>
           </aside>
+
           <section className="flex-1 min-w-0" aria-live="polite" aria-busy={loading}>
             {loading && <p className="text-sm text-zinc-600 mb-3" role="status">Loading…</p>}
-            {!loading && error && !isStale && recalls.length === 0 && (
+            {!loading && error && !isStale && recalls.length===0 && (
               <div className="text-center py-12">
-                <p className="text-zinc-600" role="alert">Failed to load: {error.message} ({error.code})</p>
-                {error.retryable && <button onClick={load} className="mt-3 px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">Retry</button>}
+                <p className="text-zinc-600" role="alert">Failed to load recalls: {error.message} ({error.code})</p>
+                {error.retryable && <button onClick={triggerReload} className="mt-3 px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">Retry</button>}
               </div>
             )}
-            {!loading && !error && recalls.length === 0 && <p className="text-zinc-600 text-center py-12" role="status">No recalls match your filters.</p>}
-            {!loading && !(error && !isStale && recalls.length === 0) && (
+            {!loading && !error && recalls.length===0 && <p className="text-zinc-600 text-center py-12" role="status">No recalls match your filters.</p>}
+            {!loading && !(error && !isStale && recalls.length===0) && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {recalls.map(r => <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={isNewRecall(r.recallInitiationDate)} watchlist={watchlist} />)}
+                  {recalls.map(r=> <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={isNewRecall(r.recallInitiationDate)} watchlist={watchlist} />)}
                 </div>
                 <div className="flex items-center justify-between mt-6">
-                  <button disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Previous page">Previous</button>
-                  <span className="text-sm text-zinc-600" aria-live="polite">Page {page + 1} / {totalPages} • {total} results</span>
-                  <button disabled={page + 1 >= totalPages} onClick={() => setPage(p => p + 1)} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Next page">Next</button>
+                  <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Previous page">Previous</button>
+                  <span className="text-sm text-zinc-600" aria-live="polite">Page {page+1} / {totalPages} • {total} results {isStale ? '(stale)' : ''}</span>
+                  <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Next page">Next</button>
                 </div>
+                <p className="text-xs text-zinc-500 text-center mt-2">Sorted by report_date desc • Dates shown are recall_initiation_date or report_date from FDA</p>
               </>
             )}
           </section>
         </div>
       </main>
-      {selected && <RecallDetail recall={selected} onClose={() => setSelected(null)} />}
+
+      {selected && <RecallDetail recall={selected} onClose={()=>setSelected(null)} />}
+
       <footer className="border-t bg-white text-xs text-zinc-600 px-4 py-4 text-center">
-        Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank">openFDA</a> • Cached 6h • {lastSynced ? `synced ${new Date(lastSynced).toLocaleDateString()}` : 'no sync'} • Not medical advice.
+        Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank">openFDA Food Enforcement API</a> ({import.meta.env.VITE_OPENFDA_KEY ? '240/min with key' : '40/min — set VITE_OPENFDA_KEY for 240/min'}) • {isStale ? `Stale cached from ${lastSynced ? new Date(lastSynced).toLocaleDateString() : 'unknown'}` : lastSynced ? `Last retrieved ${new Date(lastSynced).toLocaleDateString()}` : 'No retrieval yet'} • Live vs cached distinguished per result set • Not medical advice.
       </footer>
     </div>
   )

@@ -17,7 +17,15 @@ interface OpenFDARecord {
   report_date?: string
   product_type?: string
   code_info?: string
+  more_code_info?: string
   voluntary_mandated?: string
+  address_1?: string
+  address_2?: string
+  postal_code?: string
+  center_classification_date?: string
+  initial_firm_notification?: string
+  product_quantity?: string
+  termination_date?: string
 }
 
 function mapOpenFDA(r: OpenFDARecord): Recall {
@@ -37,12 +45,56 @@ function mapOpenFDA(r: OpenFDARecord): Recall {
     recallInitiationDate: r.recall_initiation_date || r.report_date || '',
     productType: r.product_type || 'Food',
     codeInfo: r.code_info || '',
+    moreCodeInfo: r.more_code_info || '',
     voluntaryMandated: r.voluntary_mandated || '',
+    address1: r.address_1 || '',
+    address2: r.address_2 || '',
+    postalCode: r.postal_code || '',
+    centerClassificationDate: r.center_classification_date || '',
+    initialFirmNotification: r.initial_firm_notification || '',
+    productQuantity: r.product_quantity || '',
+    terminationDate: r.termination_date || '',
   }
 }
 
 export function sanitizeSearchQuery(query: string): string {
   return query.replace(/["\\]/g, '').trim()
+}
+
+const STATE_NAMES: Record<string, string> = {
+  AL: 'Alabama', AK: 'Alaska', AZ: 'Arizona', AR: 'Arkansas', CA: 'California', CO: 'Colorado', CT: 'Connecticut', DE: 'Delaware', FL: 'Florida', GA: 'Georgia', HI: 'Hawaii', ID: 'Idaho', IL: 'Illinois', IN: 'Indiana', IA: 'Iowa', KS: 'Kansas', KY: 'Kentucky', LA: 'Louisiana', ME: 'Maine', MD: 'Maryland', MA: 'Massachusetts', MI: 'Michigan', MN: 'Minnesota', MS: 'Mississippi', MO: 'Missouri', MT: 'Montana', NE: 'Nebraska', NV: 'Nevada', NH: 'New Hampshire', NJ: 'New Jersey', NM: 'New Mexico', NY: 'New York', NC: 'North Carolina', ND: 'North Dakota', OH: 'Ohio', OK: 'Oklahoma', OR: 'Oregon', PA: 'Pennsylvania', RI: 'Rhode Island', SC: 'South Carolina', SD: 'South Dakota', TN: 'Tennessee', TX: 'Texas', UT: 'Utah', VT: 'Vermont', VA: 'Virginia', WA: 'Washington', WV: 'West Virginia', WI: 'Wisconsin', WY: 'Wyoming',
+}
+
+export function matchesDistributionPattern(distributionPattern: string, selectedState: string): boolean {
+  if (!selectedState) return true
+  const pattern = distributionPattern.toLowerCase()
+  if (!pattern || pattern.trim() === '') return false // unclear, not matching specific state
+  // Nationwide is potentially relevant to any state
+  if (pattern.includes('nationwide') || pattern.includes('national distribution') || pattern.includes('nationwide -')) {
+    return true
+  }
+  if (selectedState === 'Nationwide') {
+    return pattern.includes('nationwide') || pattern.includes('national')
+  }
+  // Bounded abbreviation match: \bCA\b etc. (case-sensitive for abbreviations to avoid matching English words like "in" for IN)
+  const abbr = selectedState
+  const full = STATE_NAMES[selectedState] || ''
+  const abbrRegex = new RegExp(`\\b${abbr}\\b`)
+  if (abbrRegex.test(distributionPattern)) return true
+  if (full && new RegExp(`\\b${full}\\b`, 'i').test(distributionPattern)) return true
+  return false
+}
+
+export function isDistributionUnclear(distributionPattern: string): boolean {
+  const p = distributionPattern.trim().toLowerCase()
+  if (!p) return true
+  if (p === 'n/a' || p === 'unknown' || p.includes('direct to consumer') || p.includes('retail only')) {
+    // Consider ambiguous/region-only as unclear if no state abbreviation or nationwide present
+    const hasState = Object.keys(STATE_NAMES).some(abbr => new RegExp(`\\b${abbr}\\b`, 'i').test(distributionPattern) || new RegExp(`\\b${STATE_NAMES[abbr]}\\b`, 'i').test(distributionPattern))
+    const hasNationwide = p.includes('nationwide') || p.includes('national')
+    return !hasState && !hasNationwide
+  }
+  return false
 }
 
 /**
@@ -79,6 +131,11 @@ interface CacheEntry {
 }
 
 function getCache(cacheKey: string): { recalls: Recall[]; total: number } | null {
+  const entry = getCacheEntry(cacheKey)
+  return entry ? entry.data : null
+}
+
+function getCacheEntry(cacheKey: string): CacheEntry | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return null
@@ -86,7 +143,7 @@ function getCache(cacheKey: string): { recalls: Recall[]; total: number } | null
     const hit = entries.find(e => e.key === cacheKey)
     if (!hit) return null
     if (Date.now() - hit.timestamp > CACHE_TTL_MS) return null
-    return hit.data
+    return hit
   } catch {
     return null
   }
@@ -193,10 +250,18 @@ export async function fetchRecalls(params?: {
   const predicates: string[] = []
   if (classification) predicates.push(`classification:"${sanitizeSearchQuery(classification)}"`)
   if (status) predicates.push(`status:"${sanitizeSearchQuery(status)}"`)
-  if (state) predicates.push(`distribution_pattern:"${sanitizeSearchQuery(state)}"`)
+  if (state) {
+    if (state === 'Nationwide') {
+      predicates.push(`distribution_pattern:"Nationwide"`)
+    } else {
+      // Include nationwide as potentially relevant to any state
+      predicates.push(`(distribution_pattern:"${sanitizeSearchQuery(state)}" OR distribution_pattern:"Nationwide" OR distribution_pattern:"national")`)
+    }
+  }
   const searchParam = buildSearchParam(search, predicates)
   const cacheKey = `${sanitizeSearchQuery(search)}|${classification}|${status}|${state}|${limit}|${skip}`
-  const cached = getCache(cacheKey)
+  const cachedEntry = getCacheEntry(cacheKey)
+  const cached = cachedEntry?.data ?? null
   const demo = isDemoMode()
 
   // Demo mode: explicit, conspicuously fictional data — filter before slicing
@@ -214,7 +279,7 @@ export async function fetchRecalls(params?: {
     }
     if (classification) filtered = filtered.filter(r => r.classification === classification)
     if (status) filtered = filtered.filter(r => r.status.toLowerCase() === status.toLowerCase())
-    if (state) filtered = filtered.filter(r => r.distributionPattern.toLowerCase().includes(state.toLowerCase()))
+    if (state) filtered = filtered.filter(r => matchesDistributionPattern(r.distributionPattern, state))
     const total = filtered.length
     const paged = filtered.slice(skip, skip + limit)
     return { recalls: paged, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: true }
@@ -225,7 +290,7 @@ export async function fetchRecalls(params?: {
       const err: FetchError = { code: 'NETWORK', message: 'Aborted', retryable: false }
       return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
     }
-    let url = `https://api.fda.gov/food/enforcement.json?limit=${limit}&skip=${skip}`
+    let url = `https://api.fda.gov/food/enforcement.json?limit=${limit}&skip=${skip}&sort=report_date:desc`
     if (searchParam) {
       url += `&search=${encodeURIComponent(searchParam)}`
     }
@@ -242,15 +307,15 @@ export async function fetchRecalls(params?: {
         return { recalls: [], total: 0, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: false }
       }
       // For retryable errors, return stale cache if available with label
-      if (cached) {
-        return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: getLastSynced(), isDemo: false }
+      if (cached && cachedEntry) {
+        return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
       }
       return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
     }
     const data = await res.json()
     if (!data || !Array.isArray(data.results)) {
       const err: FetchError = { code: 'MALFORMED', message: 'Malformed FDA response', retryable: true }
-      if (cached) return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: getLastSynced(), isDemo: false }
+      if (cached && cachedEntry) return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
       return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
     }
     const recalls: Recall[] = data.results.map(mapOpenFDA)
@@ -262,8 +327,8 @@ export async function fetchRecalls(params?: {
     const err: FetchError = isAbort
       ? { code: 'TIMEOUT', message: 'Request timed out', retryable: true }
       : { code: 'NETWORK', message: e instanceof Error ? e.message : 'Network error', retryable: true }
-    if (cached) {
-      return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: getLastSynced(), isDemo: false }
+    if (cached && cachedEntry) {
+      return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
     }
     return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
   }
