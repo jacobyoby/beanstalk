@@ -265,7 +265,12 @@ export async function fetchRecalls(params?: {
   }
   const searchParam = buildSearchParam(search, predicates)
   const dietaryKey = (dietary as string[]).join(',')
-  const cacheKey = `${sanitizeSearchQuery(search)}|${classification}|${status}|${state}|${dietaryKey}|${limit}|${skip}`
+  const cappedSkip = Math.min(skip, 25000)
+  if (cappedSkip !== skip) {
+    // Offset beyond FDA limit — return empty with truncated window info, do not request
+    return { recalls: [], total: 0, error: { code: 'BAD_REQUEST', message: 'Skip exceeds FDA limit 25,000 — narrow filters', status: 400, retryable: false }, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+  }
+  const cacheKey = `${sanitizeSearchQuery(search)}|${classification}|${status}|${state}|${dietaryKey}|${limit}|${cappedSkip}`
   const cachedEntry = getCacheEntry(cacheKey)
   const cached = cachedEntry?.data ?? null
   const demo = isDemoMode()
@@ -288,7 +293,7 @@ export async function fetchRecalls(params?: {
     if (state) filtered = filtered.filter(r => matchesDistributionPattern(r.distributionPattern, state))
     if (dietary.length > 0) filtered = filtered.filter(r => matchesDietaryConcerns(r, dietary as DietaryConcern[]))
     const total = filtered.length
-    const paged = filtered.slice(skip, skip + limit)
+    const paged = filtered.slice(cappedSkip, cappedSkip + limit)
     return { recalls: paged, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: true }
   }
 
@@ -300,7 +305,7 @@ export async function fetchRecalls(params?: {
     const isBrowser = typeof window !== 'undefined' && window.location.origin !== 'null'
     const proxyBase = isBrowser ? `${window.location.origin}/api/food/enforcement.json` : 'https://api.fda.gov/food/enforcement.json'
     const directBase = 'https://api.fda.gov/food/enforcement.json'
-    let url = `${proxyBase}?limit=${limit}&skip=${skip}&sort=report_date:desc`
+    let url = `${proxyBase}?limit=${limit}&skip=${cappedSkip}&sort=report_date:desc`
     if (searchParam) {
       url += `&search=${encodeURIComponent(searchParam)}`
     }
@@ -310,12 +315,12 @@ export async function fetchRecalls(params?: {
     try {
       res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS, params?.signal)
       if (!res.ok && res.status === 404 && proxyBase !== directBase && isBrowser) {
-        const directUrl = `${directBase}?limit=${limit}&skip=${skip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ''}`
+        const directUrl = `${directBase}?limit=${limit}&skip=${cappedSkip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ''}`
         res = await fetchWithTimeout(directUrl, FETCH_TIMEOUT_MS, params?.signal)
       }
     } catch (e) {
       if (isBrowser && proxyBase !== directBase && !(e instanceof DOMException && (e as DOMException).name === 'AbortError')) {
-        const directUrl = `${directBase}?limit=${limit}&skip=${skip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ''}`
+        const directUrl = `${directBase}?limit=${limit}&skip=${cappedSkip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ''}`
         res = await fetchWithTimeout(directUrl, FETCH_TIMEOUT_MS, params?.signal)
       } else {
         throw e
