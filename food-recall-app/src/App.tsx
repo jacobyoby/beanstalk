@@ -100,7 +100,7 @@ export default function App() {
       <header className="sticky top-0 z-10 bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900">Food Recall Tracker</h1>
+            <h1 className="text-2xl font-bold text-zinc-900">Beanstalk</h1>
             <p className="text-sm text-zinc-600">
               FDA Enforcement Reports (archival) • Sorted by report_date newest first • {isDemo ? 'DEMO — Fictional' : isStale ? 'Stale cached' : error ? `Error: ${error.code}` : 'Live'} • {lastSynced ? `Retrieved ${new Date(lastSynced).toLocaleString()}` : 'No sync yet'} • Key via server proxy (not in bundle)
             </p>
