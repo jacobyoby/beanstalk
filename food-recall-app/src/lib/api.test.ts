@@ -193,6 +193,21 @@ describe('fetchRecalls — no synthetic fallback', () => {
     expect(res.recalls).toEqual([])
   })
 
+  it('preserves more_code_info without truncation', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        results: [{ recall_number: 'F-2258-2016', code_info: 'a'.repeat(32600), more_code_info: 'Lots 8L5M30, ' + 'x'.repeat(9130), product_description: 'Test', reason_for_recall: 'X', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: '' }],
+        meta: { results: { total: 1 } }
+      })
+    }))
+    const res = await fetchRecalls({ search: 'F-2258-2016', limit: 6, skip: 0 })
+    expect(res.recalls[0].codeInfo.length).toBe(32600)
+    expect(res.recalls[0].moreCodeInfo).toContain('8L5M30')
+    expect(res.recalls[0].moreCodeInfo.length).toBeGreaterThan(9000)
+    // Regression: lot only in more_code_info is searchable via mock? No, but preserved
+  })
+
   it('out-of-order: second request wins, first stale ignored via caller generation (simulated)', async () => {
     // Simulate two overlapping fetches where first is slower
     let firstResolve: (v: Response) => void
@@ -213,5 +228,30 @@ describe('fetchRecalls — no synthetic fallback', () => {
     expect(r2.recalls[0].productDescription).toBe('Second')
     // Verify fetch called twice with different search params
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('distribution: bounded state recognition and nationwide', () => {
+  it('matches correctly', async () => {
+    const { matchesDistributionPattern, isDistributionUnclear } = await import('./api')
+    expect(matchesDistributionPattern('CA, AZ', 'CA')).toBe(true)
+    expect(matchesDistributionPattern('CA, AZ', 'NJ')).toBe(false)
+    expect(matchesDistributionPattern('CA, AZ, TX, NM', 'TX')).toBe(true)
+    expect(matchesDistributionPattern('CA, AZ, TX', 'NY')).toBe(false)
+    expect(matchesDistributionPattern('Nationwide - retail', 'CA')).toBe(true)
+    expect(matchesDistributionPattern('Nationwide', 'IN')).toBe(true)
+    expect(matchesDistributionPattern('national distribution', 'CA')).toBe(true)
+    expect(isDistributionUnclear('')).toBe(true)
+    expect(matchesDistributionPattern('', 'CA')).toBe(false)
+    expect(isDistributionUnclear('Direct to consumer')).toBe(true)
+    expect(matchesDistributionPattern('Indiana', 'IN')).toBe(true)
+    expect(matchesDistributionPattern('IN, CA', 'IN')).toBe(true)
+    expect(matchesDistributionPattern('Virginia', 'IN')).toBe(false)
+    expect(matchesDistributionPattern('Distribution in Indiana', 'IN')).toBe(true)
+    expect(matchesDistributionPattern('Distribution in Virginia', 'IN')).toBe(false)
+    expect(matchesDistributionPattern('unrelated text with in inside', 'IN')).toBe(false)
+    expect(matchesDistributionPattern('California, Arizona', 'CA')).toBe(true)
+    expect(matchesDistributionPattern('California distribution', 'CA')).toBe(true)
+    expect(matchesDistributionPattern('CA', 'CA')).toBe(true)
   })
 })
