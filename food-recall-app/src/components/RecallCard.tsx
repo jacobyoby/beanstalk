@@ -24,8 +24,17 @@ export default function RecallCard({ recall, onSelect, isNew, watchlist }: Props
 
   return (
     <article
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect(recall)}
-      className={`bg-white dark:bg-zinc-800 border rounded-xl p-4 hover:shadow-md cursor-pointer transition flex flex-col gap-2 ${
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect(recall)
+        }
+      }}
+      aria-label={`View recall ${recall.recallNumber}: ${recall.productDescription}`}
+      className={`bg-white dark:bg-zinc-800 border rounded-xl p-4 hover:shadow-md cursor-pointer transition flex flex-col gap-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
         isNew ? 'border-blue-400 dark:border-blue-500 ring-1 ring-blue-200 dark:ring-blue-800' : 'dark:border-zinc-700'
       }`}
     >
