@@ -17,5 +17,12 @@ export interface Recall {
   codeInfo: string
   moreCodeInfo: string
   voluntaryMandated: string
+  address1: string
+  address2: string
+  postalCode: string
+  centerClassificationDate: string
+  initialFirmNotification: string
+  productQuantity: string
+  terminationDate: string
 }
 export interface OpenFDAResponse { meta: { results: { total: number; skip: number; limit: number } }; results: any[] }

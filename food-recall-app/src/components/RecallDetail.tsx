@@ -51,6 +51,11 @@ export default function RecallDetail({ recall, isDemo = false, onClose }: Props)
           <div><dt className="font-semibold">Code Info</dt><dd className="whitespace-pre-wrap break-words max-h-64 overflow-auto border rounded p-2 bg-zinc-50 dark:bg-zinc-900 text-xs select-text" tabIndex={0}>{recall.codeInfo || '—'}</dd>{!fictional && <dd className="text-xs text-zinc-500 mt-1">Source: FDA code_info</dd>}</div>
           {recall.moreCodeInfo && <div><dt className="font-semibold">More Code Info (continuation)</dt><dd className="whitespace-pre-wrap break-words max-h-64 overflow-auto border rounded p-2 bg-zinc-50 dark:bg-zinc-900 text-xs select-text" tabIndex={0}>{recall.moreCodeInfo}</dd>{!fictional && <dd className="text-xs text-zinc-500 mt-1">Source: FDA more_code_info</dd>}</div>}
           <div><dt className="font-semibold">Initiation Date</dt><dd>{formatRecallDate(recall.recallInitiationDate)}</dd></div>
+          {recall.centerClassificationDate && <div><dt className="font-semibold">FDA Classification Date</dt><dd>{formatRecallDate(recall.centerClassificationDate)}</dd></div>}
+          {recall.terminationDate && <div><dt className="font-semibold">Termination Date</dt><dd>{formatRecallDate(recall.terminationDate)}</dd></div>}
+          {recall.productQuantity && <div><dt className="font-semibold">Quantity</dt><dd>{recall.productQuantity}</dd></div>}
+          {recall.initialFirmNotification && <div><dt className="font-semibold">Firm Notification</dt><dd>{recall.initialFirmNotification}</dd></div>}
+          {(recall.address1 || recall.postalCode) && <div><dt className="font-semibold">Firm Address</dt><dd>{[recall.address1, recall.address2, `${recall.city}, ${recall.state} ${recall.postalCode}`].filter(Boolean).join(', ')}</dd></div>}
           <div><dt className="font-semibold">Voluntary/Mandated</dt><dd>{recall.voluntaryMandated}</dd></div>
         </dl>
         {!fictional && <a

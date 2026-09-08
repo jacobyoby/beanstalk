@@ -10,6 +10,7 @@ import FilterPanel from './components/FilterPanel'
 import WatchlistPanel from './components/WatchlistPanel'
 import { isNewRecall } from './lib/formatDate'
 import { useWatchlist } from './hooks/useWatchlist'
+import { getDietaryMatches, type DietaryConcern } from './lib/dietary'
 
 export default function App() {
   const [recalls, setRecalls] = useState<Recall[]>([])
@@ -23,6 +24,7 @@ export default function App() {
   const [classification, setClassification] = useState<RecallClassification | ''>('')
   const [status, setStatus] = useState('')
   const [state, setState] = useState('')
+  const [dietary, setDietary] = useState<DietaryConcern[]>([])
   const [selected, setSelected] = useState<Recall | null>(null)
   const [page, setPage] = useState(0)
   const [lastSynced, setLastSynced] = useState<string | null>(getLastSynced())
@@ -40,7 +42,7 @@ export default function App() {
 
   useEffect(() => {
     setPage(prev => (prev !== 0 ? 0 : prev))
-  }, [classification, status, state, debounced])
+  }, [classification, status, state, dietary, debounced])
 
   useEffect(() => {
     const requestId = ++requestIdRef.current
@@ -49,7 +51,7 @@ export default function App() {
     abortRef.current = controller
     setLoading(true)
     setError(null)
-    fetchRecalls({ search: debounced, limit, skip: page * limit, classification, status, state, signal: controller.signal }).then(({ recalls: data, total: t, error: err, isStale: stale, isDemo: demo }) => {
+    fetchRecalls({ search: debounced, limit, skip: page * limit, classification, status, state, dietary, signal: controller.signal }).then(({ recalls: data, total: t, error: err, isStale: stale, isDemo: demo }) => {
       if (requestId !== requestIdRef.current) return
       if (controller.signal.aborted) return
       setRecalls(data)
@@ -74,7 +76,7 @@ export default function App() {
       setLoading(false)
     })
     return () => controller.abort()
-  }, [debounced, page, classification, status, state, reloadKey, watchlist, notificationsEnabled])
+  }, [debounced, page, classification, status, state, dietary, reloadKey, watchlist, notificationsEnabled])
 
   async function enableNotifications() {
     if (isDemoMode()) return
@@ -113,7 +115,7 @@ export default function App() {
           <aside className="lg:w-64 shrink-0">
             <div className="lg:sticky lg:top-[88px] space-y-4">
               <SearchBar value={query} onChange={setQuery} />
-              <FilterPanel classification={classification} status={status} state={state} onClassification={setClassification} onStatus={setStatus} onState={setState} onClear={()=>{setClassification('');setStatus('');setState('');setQuery('')}} />
+              <FilterPanel classification={classification} status={status} state={state} dietary={dietary} onClassification={setClassification} onStatus={setStatus} onState={setState} onDietary={setDietary} onClear={()=>{setClassification('');setStatus('');setState('');setDietary([]);setQuery('')}} />
               <WatchlistPanel items={watchlist} onAdd={addToWatchlist} onRemove={removeFromWatchlist} />
               <div className="text-xs text-zinc-600 bg-zinc-100 rounded-lg p-3">
                 <p className="font-semibold">Classification</p>
@@ -134,7 +136,7 @@ export default function App() {
             {!loading && !(error && !isStale && recalls.length===0) && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {recalls.map(r => <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={!isDemo && isNewRecall(r.recallInitiationDate)} watchlist={watchlist} />)}
+                  {recalls.map(r => <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={!isDemo && isNewRecall(r.recallInitiationDate)} watchlist={watchlist} dietary={dietary} />)}
                 </div>
                 <div className="flex items-center justify-between mt-6">
                   <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Previous page">Previous</button>

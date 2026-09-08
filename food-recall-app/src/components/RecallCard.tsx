@@ -1,12 +1,14 @@
 import type { Recall } from '../types/recall'
-import { formatRecallDate, isNewRecall } from '../lib/formatDate'
+import { formatRecallDate } from '../lib/formatDate'
 import { matchesWatchlist } from '../lib/watchlist'
+import { getDietaryMatches, type DietaryConcern } from '../lib/dietary'
 
 interface Props {
   recall: Recall
   onSelect: (r: Recall) => void
   isNew: boolean
   watchlist: string[]
+  dietary?: DietaryConcern[]
 }
 
 function badge(c: string) {
@@ -15,12 +17,13 @@ function badge(c: string) {
   return 'bg-zinc-500 text-white'
 }
 
-export default function RecallCard({ recall, onSelect, isNew, watchlist }: Props) {
+export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary = [] }: Props) {
   const matchedTerms = matchesWatchlist(
     `${recall.productDescription} ${recall.reasonForRecall} ${recall.recallingFirm}`,
     watchlist
   )
   const isWatched = matchedTerms.length > 0
+  const dietaryMatches = dietary.length > 0 ? getDietaryMatches(recall, dietary) : []
 
   return (
     <article
@@ -56,7 +59,13 @@ export default function RecallCard({ recall, onSelect, isNew, watchlist }: Props
       <p className="text-xs text-zinc-500 dark:text-zinc-400">{recall.recallingFirm} • {formatRecallDate(recall.recallInitiationDate)}</p>
       <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">Dist: {recall.distributionPattern}</p>
       {isWatched && matchedTerms.length > 0 && (
-        <p className="text-xs text-amber-600 dark:text-amber-400">Matches: {matchedTerms.join(', ')}</p>
+        <p className="text-xs text-amber-600 dark:text-amber-400">Watch: {matchedTerms.join(', ')}</p>
+      )}
+      {dietaryMatches.length > 0 && (
+        <p className="text-xs text-emerald-600 dark:text-emerald-400">Dietary: {dietaryMatches.map(m => `${m.concern} via ${m.field} (“${m.term}”)`).join(', ')}</p>
+      )}
+      {dietary.length > 0 && dietaryMatches.length === 0 && (
+        <p className="text-xs text-zinc-500">No dietary match — absence does not mean allergen-free</p>
       )}
     </article>
   )
