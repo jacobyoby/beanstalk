@@ -38,7 +38,7 @@ jobs:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
       - uses: actions/setup-node@v4
-        with: { node-version: 20, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
+        with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
       - run: npm ci
         working-directory: food-recall-app
       - name: Adversarial test run
