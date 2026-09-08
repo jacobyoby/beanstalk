@@ -81,6 +81,11 @@ interface CacheEntry {
 }
 
 function getCache(cacheKey: string): { recalls: Recall[]; total: number } | null {
+  const entry = getCacheEntry(cacheKey)
+  return entry ? entry.data : null
+}
+
+function getCacheEntry(cacheKey: string): CacheEntry | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY)
     if (!raw) return null
@@ -88,7 +93,7 @@ function getCache(cacheKey: string): { recalls: Recall[]; total: number } | null
     const hit = entries.find(e => e.key === cacheKey)
     if (!hit) return null
     if (Date.now() - hit.timestamp > CACHE_TTL_MS) return null
-    return hit.data
+    return hit
   } catch {
     return null
   }
@@ -198,7 +203,8 @@ export async function fetchRecalls(params?: {
   if (state) predicates.push(`distribution_pattern:"${sanitizeSearchQuery(state)}"`)
   const searchParam = buildSearchParam(search, predicates)
   const cacheKey = `${sanitizeSearchQuery(search)}|${classification}|${status}|${state}|${limit}|${skip}`
-  const cached = getCache(cacheKey)
+  const cachedEntry = getCacheEntry(cacheKey)
+  const cached = cachedEntry?.data ?? null
   const demo = isDemoMode()
 
   // Demo mode: explicit, conspicuously fictional data — filter before slicing
@@ -227,7 +233,7 @@ export async function fetchRecalls(params?: {
       const err: FetchError = { code: 'NETWORK', message: 'Aborted', retryable: false }
       return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
     }
-    let url = `https://api.fda.gov/food/enforcement.json?limit=${limit}&skip=${skip}`
+    let url = `https://api.fda.gov/food/enforcement.json?limit=${limit}&skip=${skip}&sort=report_date:desc`
     if (searchParam) {
       url += `&search=${encodeURIComponent(searchParam)}`
     }
@@ -244,15 +250,15 @@ export async function fetchRecalls(params?: {
         return { recalls: [], total: 0, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: false }
       }
       // For retryable errors, return stale cache if available with label
-      if (cached) {
-        return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: getLastSynced(), isDemo: false }
+      if (cached && cachedEntry) {
+        return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
       }
       return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
     }
     const data = await res.json()
     if (!data || !Array.isArray(data.results)) {
       const err: FetchError = { code: 'MALFORMED', message: 'Malformed FDA response', retryable: true }
-      if (cached) return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: getLastSynced(), isDemo: false }
+      if (cached && cachedEntry) return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
       return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
     }
     const recalls: Recall[] = data.results.map(mapOpenFDA)
@@ -264,8 +270,8 @@ export async function fetchRecalls(params?: {
     const err: FetchError = isAbort
       ? { code: 'TIMEOUT', message: 'Request timed out', retryable: true }
       : { code: 'NETWORK', message: e instanceof Error ? e.message : 'Network error', retryable: true }
-    if (cached) {
-      return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: getLastSynced(), isDemo: false }
+    if (cached && cachedEntry) {
+      return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
     }
     return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
   }
