@@ -99,20 +99,20 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-amber-700 text-white px-3 py-2 rounded">Skip to content</a>
-      <header className="sticky top-0 z-10 bg-white border-b shadow-sm">
+      <header className="sticky top-0 z-10 bg-white dark:bg-zinc-900 dark:border-zinc-700 border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900">Beanstalk</h1>
-            <p className="text-sm text-zinc-600">
+            <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Beanstalk</h1>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
               FDA enforcement records • {lastSynced ? `Retrieved ${new Date(lastSynced).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} today` : 'Retrieved — awaiting sync'}
             </p>
-            <p className="text-xs text-zinc-500 mt-1">Source: openFDA Food Enforcement (2004-present). Status is FDA-reported, not verified real-time lifecycle.</p>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Source: openFDA Food Enforcement (2004-present). Status is FDA-reported, not verified real-time lifecycle.</p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="text-xs bg-zinc-50 border border-zinc-200 rounded-lg px-3 py-2 text-zinc-700 max-w-sm">
+            <div className="text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-zinc-700 dark:text-zinc-300 max-w-sm">
               <strong>FDA scope:</strong> Enforcement archive; status may remain Ongoing after publication. Verify with FDA before action.
             </div>
-            <button onClick={toggleDark} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} className="px-3 py-2 border rounded-lg text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px]">{dark ? 'Light' : 'Dark'} mode</button>
+            <button onClick={toggleDark} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} className="px-3 py-2 border dark:border-zinc-600 rounded-lg text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px]">{dark ? 'Light' : 'Dark'} mode</button>
           </div>
         </div>
         {isDemo && <div className="bg-purple-600 text-white text-center text-sm py-2">DEMO MODE — Fictional data, not real FDA recalls. Add ?demo=1 to URL.</div>}
@@ -126,7 +126,7 @@ export default function App() {
               <SearchBar value={query} onChange={setQuery} />
               <FilterPanel classification={classification} status={status} state={state} dietary={dietary} onClassification={setClassification} onStatus={setStatus} onState={setState} onDietary={setDietary} onClear={()=>{setClassification('');setStatus('');setState('');setDietary([]);setQuery('')}} />
               <WatchlistPanel items={watchlist} onAdd={addToWatchlist} onRemove={removeFromWatchlist} />
-              <div className="text-xs text-zinc-600 bg-zinc-100 rounded-lg p-3">
+              <div className="text-xs text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-700 border rounded-lg p-3">
                 <p className="font-semibold">Classification</p>
                 <p>Class I = reasonable probability of serious adverse health consequences (21 CFR 7.3). Displayed per FDA record.</p>
               </div>
@@ -148,9 +148,9 @@ export default function App() {
                   {recalls.map(r=> <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={isNewRecall(r.recallInitiationDate)} watchlist={watchlist} dietary={dietary} />)}
                 </div>
                 <div className="flex items-center justify-between mt-6">
-                  <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-3 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]" aria-label="Previous page">Previous</button>
-                  <span className="text-sm text-zinc-600" aria-live="polite">Page {page+1} / {totalPages} • {hasTruncatedWindow ? `${reachableTotal} of ${total} reachable` : `${total} results`} {isStale ? '(stale)' : ''}</span>
-                  <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-3 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]" aria-label="Next page">Next</button>
+                  <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-3 border dark:border-zinc-600 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]" aria-label="Previous page">Previous</button>
+                  <span className="text-sm text-zinc-600 dark:text-zinc-400" aria-live="polite">Page {page+1} / {totalPages} • {hasTruncatedWindow ? `${reachableTotal} of ${total} reachable` : `${total} results`} {isStale ? '(stale)' : ''}</span>
+                  <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-3 border dark:border-zinc-600 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]" aria-label="Next page">Next</button>
                 </div>
                 {hasTruncatedWindow && <p className="text-xs text-amber-600 text-center mt-2">Showing first {reachableTotal.toLocaleString()} of {total.toLocaleString()} • Narrow filters to see more • FDA offset limit {FDA_MAX_SKIP.toLocaleString()} prevents beyond page {maxPage+1}</p>}
                 <p className="text-xs text-zinc-500 text-center mt-2">Sorted by report_date desc • Dates shown are recall_initiation_date or report_date from FDA</p>
@@ -162,7 +162,7 @@ export default function App() {
 
       {selected && <RecallDetail recall={selected} onClose={()=>setSelected(null)} />}
 
-      <footer className="border-t bg-white text-xs text-zinc-600 px-4 py-4 text-center">
+      <footer className="border-t bg-white dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-400 text-xs text-zinc-600 px-4 py-4 text-center">
         Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank">openFDA Food Enforcement</a> • FDA scope: Enforcement archive; verify with FDA before action. • Not medical advice.
       </footer>
     </div>
