@@ -22,7 +22,8 @@ export default function RecallDetail({ recall, onClose }: Props) {
           <div><dt className="font-semibold">Reason</dt><dd>{recall.reasonForRecall}</dd></div>
           <div><dt className="font-semibold">Firm</dt><dd>{recall.recallingFirm} — {recall.city}, {recall.state}</dd></div>
           <div><dt className="font-semibold">Distribution</dt><dd>{recall.distributionPattern}</dd></div>
-          <div><dt className="font-semibold">Code Info</dt><dd>{recall.codeInfo || '—'}</dd></div>
+          <div><dt className="font-semibold">Code Info</dt><dd className="whitespace-pre-wrap break-words max-h-64 overflow-auto border rounded p-2 bg-zinc-50 dark:bg-zinc-900 text-xs select-text" tabIndex={0}>{recall.codeInfo || '—'}</dd><dd className="text-xs text-zinc-500 mt-1">Source: FDA code_info</dd></div>
+          {recall.moreCodeInfo && <div><dt className="font-semibold">More Code Info (continuation)</dt><dd className="whitespace-pre-wrap break-words max-h-64 overflow-auto border rounded p-2 bg-zinc-50 dark:bg-zinc-900 text-xs select-text" tabIndex={0}>{recall.moreCodeInfo}</dd><dd className="text-xs text-zinc-500 mt-1">Source: FDA more_code_info — lot 8L5M30 appears only here</dd></div>}
           <div><dt className="font-semibold">Initiation Date</dt><dd>{formatRecallDate(recall.recallInitiationDate)}</dd></div>
           <div><dt className="font-semibold">Voluntary/Mandated</dt><dd>{recall.voluntaryMandated}</dd></div>
         </dl>
