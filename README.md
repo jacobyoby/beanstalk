@@ -2,11 +2,11 @@
 
 Explore FDA food recall records by product, company, and recall reason.
 
-Beanstalk brings recall descriptions, reported classifications, distribution text, and source links into a searchable browser interface. It is an early-stage research tool, with **v0.1 in development**.
+Beanstalk brings recall descriptions, reported classifications, distribution text, and source links into a searchable browser interface. It is an actively developed app, with **v0.1 in development**.
 
-[Try the demo](https://jacobyoby.github.io/beanstalk/) · [Roadmap](https://github.com/jacobyoby/beanstalk/issues/24) · [v0.1 milestone](https://github.com/jacobyoby/beanstalk/milestone/1) · [Report an issue](https://github.com/jacobyoby/beanstalk/issues/new/choose) · [FDA data source](https://open.fda.gov/apis/food/enforcement/)
+[Open Beanstalk](https://jacobyoby.github.io/beanstalk/) · [Roadmap](https://github.com/jacobyoby/beanstalk/issues/24) · [v0.1 milestone](https://github.com/jacobyoby/beanstalk/milestone/1) · [Report an issue](https://github.com/jacobyoby/beanstalk/issues/new/choose) · [FDA data source](https://open.fda.gov/apis/food/enforcement/)
 
-The hosted demo uses clearly labeled fictional records and requires no API key.
+The app retrieves real records from the openFDA enforcement archive. GitHub Pages hosting and automatic updates from the main branch are being completed in [#42](https://github.com/jacobyoby/beanstalk/pull/42).
 
 ## Explore the records
 
@@ -20,7 +20,7 @@ The application lives in [`food-recall-app/`](food-recall-app/). The repository 
 
 | Area | Release work |
 | --- | --- |
-| Reliable results | Accurate filters and counts, complete lot data, and clear live, cached, unavailable, and demo states. |
+| Reliable results | Accurate filters and counts, complete lot data, and clear live, cached, and unavailable states. |
 | State coverage | Match where products were reportedly distributed, including nationwide and unclear distribution. |
 | Dietary concerns | Find relevant recalls through attributable allergen and ingredient mentions, with unknown information kept explicit. |
 | Accessible use | Keyboard-operable details, readable phone layouts, and consistent Beanstalk branding without emojis. |

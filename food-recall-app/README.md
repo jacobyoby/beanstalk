@@ -1,6 +1,6 @@
 # Beanstalk development notes
 
-This directory contains the React application. Start with the [repository overview](../README.md) for product scope, data limitations, and the [v0.1 roadmap](https://github.com/jacobyoby/beanstalk/issues/24).
+This directory contains the Beanstalk React application, which retrieves real FDA enforcement records. [Open Beanstalk](https://jacobyoby.github.io/beanstalk/) or start with the [repository overview](../README.md) for product scope, data limitations, and the [v0.1 roadmap](https://github.com/jacobyoby/beanstalk/issues/24).
 
 ## Local setup
 
@@ -36,12 +36,14 @@ The stack is React, TypeScript, Vite, Tailwind CSS, and Vitest. Existing tests a
 
 ## API configuration
 
-The source is the [openFDA food enforcement API](https://open.fda.gov/apis/food/enforcement/). Consult the [provider's authentication and limits documentation](https://open.fda.gov/apis/authentication/) instead of hardcoding quota assumptions.
+The source is the [openFDA food enforcement API](https://open.fda.gov/apis/food/enforcement/), an archive updated weekly. FDA says this endpoint should not be used for public alerting; reported status does not establish a recall's current lifecycle. Consult the [provider's authentication and limits documentation](https://open.fda.gov/apis/authentication/) instead of hardcoding quota assumptions.
 
 Do not place an owner credential in `VITE_OPENFDA_KEY` or another `VITE_` variable: [Vite exposes those values to browser code](https://vite.dev/guide/env-and-mode). A server-only API boundary is tracked in [#22](https://github.com/jacobyoby/beanstalk/issues/22). Never commit credentials or include them in issues, screenshots, or fixtures.
 
-Synthetic fixtures and cache behavior are under review. The [provenance issue](https://github.com/jacobyoby/beanstalk/issues/9) and [freshness issue](https://github.com/jacobyoby/beanstalk/issues/14) define the required distinction between live, cached, unavailable, and explicit demo data.
+Live results, cached records, and unavailable data must remain distinguishable. Development fixtures belong in deliberately selected sample mode and must never replace failed FDA requests. The [provenance issue](https://github.com/jacobyoby/beanstalk/issues/9) and [freshness issue](https://github.com/jacobyoby/beanstalk/issues/14) document those requirements.
 
 ## Release
 
-Run tests and the production build before proposing changes. `dist/` contains the frontend artifact; `npm run preview` is a local check, not a production host. The selected host, API boundary, asset base, smoke checks, and rollback procedure are tracked in [#19](https://github.com/jacobyoby/beanstalk/issues/19).
+Run tests and the production build before proposing changes. `dist/` contains the frontend artifact; `npm run preview` serves it for local checks.
+
+[PR #42](https://github.com/jacobyoby/beanstalk/pull/42) adds GitHub Pages hosting at `/beanstalk/`, the `build:pages` and `preview:pages` commands, and deployment updates from the main branch. That hosting work is under review; the commands above describe the existing application setup. The Pages build uses real FDA requests without embedding an owner API key. Release checks and rollback requirements are tracked in [#19](https://github.com/jacobyoby/beanstalk/issues/19).
