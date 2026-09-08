@@ -4,14 +4,15 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig(({ mode }) => {
   const demo = mode === 'demo'
-  const base = demo ? '/beanstalk/' : '/'
+  const hosted = demo || mode === 'pages'
+  const base = hosted ? '/beanstalk/' : '/'
 
   return {
     base,
-    // The public demo must never inherit an owner key from files or the shell.
-    envDir: demo ? false : undefined,
-    envPrefix: demo ? [] : 'VITE_',
-    define: demo ? { 'import.meta.env.VITE_DEMO': JSON.stringify('true') } : undefined,
+    // Hosted builds must never inherit an owner key from files or the shell.
+    envDir: hosted ? false : undefined,
+    envPrefix: hosted ? [] : 'VITE_',
+    define: hosted ? { 'import.meta.env.VITE_DEMO': JSON.stringify(demo ? 'true' : 'false') } : undefined,
     plugins: [
       react(),
       VitePWA({

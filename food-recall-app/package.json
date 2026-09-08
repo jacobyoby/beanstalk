@@ -9,10 +9,12 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "build:demo": "tsc && vite build --mode demo && node scripts/verify-demo.mjs",
+    "build:demo": "tsc && vite build --mode demo && node scripts/verify-hosted.mjs --demo",
     "preview:demo": "vite preview --mode demo",
     "lint": "eslint src --ext .ts,.tsx",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "build:pages": "tsc && vite build --mode pages && node scripts/verify-hosted.mjs",
+    "preview:pages": "vite preview --mode pages"
   },
   "dependencies": {
     "react": "^18.3.1",

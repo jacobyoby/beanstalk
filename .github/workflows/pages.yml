@@ -1,0 +1,62 @@
+name: Beanstalk Pages
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: pages-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: food-recall-app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: food-recall-app/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build:pages
+        env:
+          VITE_OPENFDA_KEY: BEANSTALK_BUILD_SECRET_SENTINEL
+      - name: Record deployed source
+        run: |
+          node --input-type=module <<'JS'
+          import { writeFileSync } from 'node:fs'
+          writeFileSync('dist/build-info.json', JSON.stringify({
+            sourceRepository: `https://github.com/${process.env.GITHUB_REPOSITORY}`,
+            sourceCommit: process.env.GITHUB_SHA,
+            mode: 'pages',
+            fictionalData: false,
+            builtAt: new Date().toISOString()
+          }, null, 2) + '\n')
+          JS
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: food-recall-app/dist
+  deploy:
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4
