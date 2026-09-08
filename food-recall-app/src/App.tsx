@@ -31,12 +31,8 @@ export default function App(){
   async function load(){
     setLoading(true)
     setError(null)
-    const {recalls: data, total: t, error: err, isStale: stale, isDemo: demo} = await fetchRecalls({search: debounced, limit, skip: page*limit})
-    let filtered=data
-    if(classification) filtered=filtered.filter(r=>r.classification===classification)
-    if(status) filtered=filtered.filter(r=>r.status.toLowerCase()===status.toLowerCase())
-    if(state) filtered=filtered.filter(r=>r.state.toLowerCase()===state.toLowerCase())
-    setRecalls(filtered)
+    const {recalls: data, total: t, error: err, isStale: stale, isDemo: demo} = await fetchRecalls({search: debounced, limit, skip: page*limit, classification, status, state})
+    setRecalls(data)
     setTotal(t)
     setError(err)
     setIsStale(stale)
@@ -44,8 +40,8 @@ export default function App(){
     setLastSynced(getLastSynced())
     setLoading(false)
   }
-  useEffect(()=>{ load() },[debounced, page])
-  useEffect(()=>{ setPage(0); load() },[classification, status, state])
+  useEffect(()=>{ load() },[debounced, page, classification, status, state])
+  useEffect(()=>{ setPage(0) },[classification, status, state, debounced])
 
   const totalPages = Math.max(1, Math.ceil(total/limit))
 

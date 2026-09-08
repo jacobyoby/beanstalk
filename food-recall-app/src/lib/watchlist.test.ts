@@ -25,6 +25,22 @@ describe('getWatchlist', () => {
     localStorage.setItem('ponder_watchlist', 'not-json')
     expect(getWatchlist()).toEqual([])
   })
+
+  it('returns empty array for valid JSON that is not an array', () => {
+    localStorage.setItem('ponder_watchlist', 'null')
+    expect(getWatchlist()).toEqual([])
+    localStorage.setItem('ponder_watchlist', '42')
+    expect(getWatchlist()).toEqual([])
+    localStorage.setItem('ponder_watchlist', '{}')
+    expect(getWatchlist()).toEqual([])
+    localStorage.setItem('ponder_watchlist', '"hello"')
+    expect(getWatchlist()).toEqual([])
+  })
+
+  it('filters out non-string items from stored array', () => {
+    localStorage.setItem('ponder_watchlist', JSON.stringify(['salmonella', 42, null, 'peanut', {}]))
+    expect(getWatchlist()).toEqual(['salmonella', 'peanut'])
+  })
 })
 
 describe('saveWatchlist', () => {
