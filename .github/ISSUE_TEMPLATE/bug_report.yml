@@ -1,0 +1,54 @@
+name: Bug Report
+description: Report a reproducible bug in Ponder
+title: "bug: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting! Fill out details below.
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      placeholder: One-line summary
+    validations: { required: true }
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to ...
+        2. Search for ...
+        3. See error
+    validations: { required: true }
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+      placeholder: Expected X but got Y
+    validations: { required: true }
+  - type: dropdown
+    id: browser
+    attributes:
+      label: Browser / OS
+      options: [Chrome, Firefox, Safari, Edge, Other]
+  - type: input
+    id: version
+    attributes:
+      label: App version / commit
+      placeholder: e.g. v0.1.0 or commit SHA
+  - type: textarea
+    id: logs
+    attributes:
+      label: Screenshots / logs
+      description: Drag screenshots; paste console errors
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues
+          required: true
+        - label: I can reproduce on main
+          required: false

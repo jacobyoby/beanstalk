@@ -1,0 +1,46 @@
+name: pr-review
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
+jobs:
+  checklist:
+    name: pr-checklist / checklist
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Validate PR title (Conventional Commits)
+        run: |
+          TITLE="${{ github.event.pull_request.title }}"
+          echo "Title: $TITLE"
+          if ! echo "$TITLE" | grep -Eq '^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)(\(.+\))?: .+'; then
+            echo "::error::PR title must follow Conventional Commits (e.g. feat: add recall filters)"
+            exit 1
+          fi
+      - name: Check PR template checklist
+        run: |
+          gh pr view ${{ github.event.pull_request.number }} --json body -q .body > body.md || true
+          cat body.md
+          grep -q "## Summary" body.md || echo "::warning::Missing Summary section"
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+      - name: Auto-label by files
+        run: |
+          gh pr view ${{ github.event.pull_request.number }} --json files -q '.files[].path' > files.txt || true
+          cat files.txt
+          if grep -q "food-recall-app/src" files.txt; then gh pr edit ${{ github.event.pull_request.number }} --add-label "enhancement" || true; fi
+          if grep -qE "\.md$" files.txt; then gh pr edit ${{ github.event.pull_request.number }} --add-label "docs" || true; fi
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+  codeowners-check:
+    name: codeowners
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate CODEOWNERS syntax
+        run: |
+          cat .github/CODEOWNERS
+          npx --yes codeowners-validator .github/CODEOWNERS || echo "::warning::install codeowners-validator for strict check"

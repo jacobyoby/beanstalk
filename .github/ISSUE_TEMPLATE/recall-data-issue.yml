@@ -1,0 +1,33 @@
+name: Recall Data Issue
+description: Report missing or incorrect recall data (openFDA / mockData)
+title: "data: "
+labels: ["data", "triage"]
+body:
+  - type: input
+    id: recall_number
+    attributes:
+      label: Recall number / product
+      placeholder: e.g. F-1234-2024 or "Brand X Peanut Butter"
+    validations: { required: true }
+  - type: dropdown
+    id: source
+    attributes:
+      label: Data source
+      options: [openFDA, mockData, both, unknown]
+  - type: input
+    id: fda_link
+    attributes:
+      label: FDA link
+      placeholder: https://api.fda.gov/food/enforcement.json?search=...
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behavior
+      placeholder: What Ponder shows now
+    validations: { required: true }
+  - type: textarea
+    id: expected_data
+    attributes:
+      label: Expected data
+      placeholder: What FDA shows / correct classification (I/II/III)
+    validations: { required: true }

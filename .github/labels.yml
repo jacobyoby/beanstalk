@@ -1,0 +1,35 @@
+# Sync with: gh label create or actions/label-sync
+# Run: ./.github/setup-labels.sh  (requires gh auth login)
+- name: bug
+  color: d73a4a
+  description: Something isn't working
+- name: enhancement
+  color: a2eeef
+  description: New feature or request
+- name: data
+  color: 006b75
+  description: Recall / openFDA data issue
+- name: triage
+  color: ededed
+  description: Needs triage
+- name: good first issue
+  color: 7057ff
+  description: Good for newcomers
+- name: help wanted
+  color: 008672
+  description: Extra attention is needed
+- name: wontfix
+  color: ffffff
+  description: This will not be worked on
+- name: duplicate
+  color: cfd3d7
+  description: This issue or PR already exists
+- name: question
+  color: d876e3
+  description: Further information is requested
+- name: docs
+  color: 0075ca
+  description: Documentation
+- name: ci
+  color: fef2c0
+  description: CI / workflows
