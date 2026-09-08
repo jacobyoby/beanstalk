@@ -99,7 +99,7 @@ export default function App() {
   return (
     <div className="min-h-screen flex flex-col">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-amber-700 text-white px-3 py-2 rounded">Skip to content</a>
-      <header className="sticky top-0 z-10 bg-white dark:bg-zinc-900 dark:border-zinc-700 border-b shadow-sm">
+      <header className="lg:sticky lg:top-0 z-10 bg-white dark:bg-zinc-900 dark:border-zinc-700 border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Beanstalk</h1>
@@ -122,9 +122,22 @@ export default function App() {
       <main id="main-content" className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
         <div className="flex flex-col lg:flex-row gap-6">
           <aside className="lg:w-64 shrink-0">
-            <div className="lg:sticky lg:top-[88px] space-y-4">
+            <div className="space-y-4 lg:sticky lg:top-4">
               <SearchBar value={query} onChange={setQuery} />
-              <FilterPanel classification={classification} status={status} state={state} dietary={dietary} onClassification={setClassification} onStatus={setStatus} onState={setState} onDietary={setDietary} onClear={()=>{setClassification('');setStatus('');setState('');setDietary([]);setQuery('')}} />
+              {(() => {
+                const activeCount = [classification, status, state, ...dietary].filter(Boolean).length
+                return (
+                  <details className="group" open>
+                    <summary className="lg:hidden flex items-center justify-between border rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 dark:border-zinc-700 cursor-pointer list-none">
+                      <span className="text-sm font-medium">Filters{activeCount ? ` (${activeCount})` : ''}</span>
+                      <span className="text-xs text-zinc-500">tap to {activeCount ? 'adjust' : 'filter'}</span>
+                    </summary>
+                    <div className="mt-3 lg:mt-0">
+                      <FilterPanel classification={classification} status={status} state={state} dietary={dietary} onClassification={setClassification} onStatus={setStatus} onState={setState} onDietary={setDietary} onClear={()=>{setClassification('');setStatus('');setState('');setDietary([]);setQuery('')}} />
+                    </div>
+                  </details>
+                )
+              })()}
               <WatchlistPanel items={watchlist} onAdd={addToWatchlist} onRemove={removeFromWatchlist} />
               <div className="text-xs text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-700 border rounded-lg p-3">
                 <p className="font-semibold">Classification</p>
