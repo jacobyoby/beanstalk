@@ -76,10 +76,10 @@ export function matchesDistributionPattern(distributionPattern: string, selected
   if (selectedState === 'Nationwide') {
     return pattern.includes('nationwide') || pattern.includes('national')
   }
-  // Bounded abbreviation match: \bCA\b etc., and full name \bCalifornia\b
-  const abbr = selectedState.toLowerCase()
-  const full = (STATE_NAMES[selectedState] || '').toLowerCase()
-  const abbrRegex = new RegExp(`\\b${abbr}\\b`, 'i')
+  // Bounded abbreviation match: \bCA\b etc. (case-sensitive for abbreviations to avoid matching English words like "in" for IN)
+  const abbr = selectedState
+  const full = STATE_NAMES[selectedState] || ''
+  const abbrRegex = new RegExp(`\\b${abbr}\\b`)
   if (abbrRegex.test(distributionPattern)) return true
   if (full && new RegExp(`\\b${full}\\b`, 'i').test(distributionPattern)) return true
   return false
