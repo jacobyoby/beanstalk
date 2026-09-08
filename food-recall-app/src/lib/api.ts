@@ -41,8 +41,35 @@ function mapOpenFDA(r: OpenFDARecord): Recall {
   }
 }
 
-function sanitizeSearchQuery(query: string): string {
+export function sanitizeSearchQuery(query: string): string {
   return query.replace(/["\\]/g, '').trim()
+}
+
+/**
+ * Build the cross-field OR clause grouped in parentheses.
+ * Returns the raw unencoded clause, e.g. (product_description:"milk" OR reason_for_recall:"milk" OR recalling_firm:"milk")
+ * The caller must encode via encodeURIComponent before appending to URL.
+ * Quotes and backslashes are stripped; other punctuation (&, #, etc.) is preserved and will be percent-encoded.
+ */
+export function buildGroupedSearchClause(search: string): string | null {
+  const sanitized = sanitizeSearchQuery(search)
+  if (!sanitized) return null
+  const fields = ['product_description', 'reason_for_recall', 'recalling_firm']
+  const inner = fields.map(f => `${f}:"${sanitized}"`).join(' OR ')
+  return `(${inner})`
+}
+
+/**
+ * Build the full search= value with grouped OR and optional predicates composed outside via AND.
+ * Each predicate is ANDed outside the grouped OR per FDA syntax.
+ */
+export function buildSearchParam(search: string, predicates: string[] = []): string | null {
+  const grouped = buildGroupedSearchClause(search)
+  const parts: string[] = []
+  if (grouped) parts.push(grouped)
+  parts.push(...predicates.filter(Boolean))
+  if (parts.length === 0) return null
+  return parts.join(' AND ')
 }
 
 const CACHE_KEY = 'ponder:openfda:cache'
@@ -105,21 +132,18 @@ export async function fetchRecalls(params?: {
 }): Promise<{ recalls: Recall[]; total: number; fromMock: boolean; lastSynced: string | null }> {
   const limit = params?.limit ?? 20
   const skip = params?.skip ?? 0
-  const search = sanitizeSearchQuery(params?.search || '')
+  const search = params?.search || ''
   const apiKey = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_OPENFDA_KEY
-  const cacheKey = `${search}|${limit}|${skip}`
+  const cacheKey = `${sanitizeSearchQuery(search)}|${limit}|${skip}`
   const cached = getCache(cacheKey)
-  // Use cache if available (served immediately, still try network below for freshness)
-  // For simplicity, return cached if fetch fails — fallback logic covers it
 
   try {
     let url = `https://api.fda.gov/food/enforcement.json?limit=${limit}&skip=${skip}`
-    if (search) {
-      const fields = ['product_description', 'reason_for_recall', 'recalling_firm']
-      const clause = fields.map(f => `${f}:"${search}"`).join('+OR+')
-      url += `&search=${clause}`
+    const searchParam = buildSearchParam(search)
+    if (searchParam) {
+      url += `&search=${encodeURIComponent(searchParam)}`
     }
-    if (apiKey) url += `&api_key=${apiKey}`
+    if (apiKey) url += `&api_key=${encodeURIComponent(apiKey)}`
 
     const res = await fetch(url)
     if (!res.ok) throw new Error(`FDA ${res.status}`)
@@ -130,9 +154,9 @@ export async function fetchRecalls(params?: {
     return { recalls, total, fromMock: false, lastSynced: getLastSynced() }
   } catch {
     if (cached) return { recalls: cached.recalls, total: cached.total, fromMock: false, lastSynced: getLastSynced() }
+    const q = sanitizeSearchQuery(search).toLowerCase()
     let filtered = mockRecalls
-    if (search) {
-      const q = search.toLowerCase()
+    if (q) {
       filtered = filtered.filter(r =>
         `${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`.toLowerCase().includes(q)
       )
