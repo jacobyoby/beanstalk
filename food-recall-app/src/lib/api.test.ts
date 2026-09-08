@@ -193,6 +193,21 @@ describe('fetchRecalls — no synthetic fallback', () => {
     expect(res.recalls).toEqual([])
   })
 
+  it('preserves more_code_info without truncation', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        results: [{ recall_number: 'F-2258-2016', code_info: 'a'.repeat(32600), more_code_info: 'Lots 8L5M30, ' + 'x'.repeat(9130), product_description: 'Test', reason_for_recall: 'X', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: '' }],
+        meta: { results: { total: 1 } }
+      })
+    }))
+    const res = await fetchRecalls({ search: 'F-2258-2016', limit: 6, skip: 0 })
+    expect(res.recalls[0].codeInfo.length).toBe(32600)
+    expect(res.recalls[0].moreCodeInfo).toContain('8L5M30')
+    expect(res.recalls[0].moreCodeInfo.length).toBeGreaterThan(9000)
+    // Regression: lot only in more_code_info is searchable via mock? No, but preserved
+  })
+
   it('out-of-order: second request wins, first stale ignored via caller generation (simulated)', async () => {
     // Simulate two overlapping fetches where first is slower
     let firstResolve: (v: Response) => void

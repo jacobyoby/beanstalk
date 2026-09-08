@@ -17,6 +17,7 @@ interface OpenFDARecord {
   report_date?: string
   product_type?: string
   code_info?: string
+  more_code_info?: string
   voluntary_mandated?: string
 }
 
@@ -37,6 +38,7 @@ function mapOpenFDA(r: OpenFDARecord): Recall {
     recallInitiationDate: r.recall_initiation_date || r.report_date || '',
     productType: r.product_type || 'Food',
     codeInfo: r.code_info || '',
+    moreCodeInfo: r.more_code_info || '',
     voluntaryMandated: r.voluntary_mandated || '',
   }
 }

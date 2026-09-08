@@ -15,6 +15,7 @@ export interface Recall {
   recallInitiationDate: string
   productType: string
   codeInfo: string
+  moreCodeInfo: string
   voluntaryMandated: string
 }
 export interface OpenFDAResponse { meta: { results: { total: number; skip: number; limit: number } }; results: any[] }
