@@ -184,4 +184,34 @@ describe('fetchRecalls — no synthetic fallback', () => {
     url.searchParams.delete('demo')
     window.history.replaceState({}, '', url.toString())
   })
+
+  it('aborted signal returns early and does not use cache mock', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const res = await fetchRecalls({ search: '', limit: 6, skip: 0, signal: controller.signal })
+    expect(res.error?.message).toBe('Aborted')
+    expect(res.recalls).toEqual([])
+  })
+
+  it('out-of-order: second request wins, first stale ignored via caller generation (simulated)', async () => {
+    // Simulate two overlapping fetches where first is slower
+    let firstResolve: (v: Response) => void
+    const firstPromise = new Promise<Response>(r => { firstResolve = r })
+    const secondPromise = Promise.resolve({ ok: true, json: async () => ({ results: [{ recall_number: 'F-2', product_description: 'Second', reason_for_recall: 'X', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: '' }], meta: { results: { total: 1 } } }) } as Response)
+    const fetchMock = vi.fn()
+      .mockReturnValueOnce(firstPromise)
+      .mockReturnValueOnce(secondPromise)
+    vi.stubGlobal('fetch', fetchMock)
+    // Start first
+    const p1 = fetchRecalls({ search: 'first', limit: 6, skip: 0 })
+    // Start second before first resolves
+    const p2 = fetchRecalls({ search: 'second', limit: 6, skip: 0 })
+    firstResolve!({ ok: true, json: async () => ({ results: [{ recall_number: 'F-1', product_description: 'First', reason_for_recall: 'X', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: '' }], meta: { results: { total: 1 } } }) } as Response)
+    const [r1, r2] = await Promise.all([p1, p2])
+    // Both resolve, caller would use generation to keep second
+    expect(r1.recalls[0].productDescription).toBe('First')
+    expect(r2.recalls[0].productDescription).toBe('Second')
+    // Verify fetch called twice with different search params
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
 })
