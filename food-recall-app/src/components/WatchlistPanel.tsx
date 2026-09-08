@@ -21,7 +21,7 @@ export default function WatchlistPanel({ items, onAdd, onRemove }: Props) {
   return (
     <div className="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl p-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-sm dark:text-zinc-100">🔔 Watchlist</h2>
+        <h2 className="font-semibold text-sm dark:text-zinc-100">Watchlist</h2>
         <span className="text-xs text-zinc-500 dark:text-zinc-400">{items.length} term{items.length !== 1 ? 's' : ''}</span>
       </div>
 
@@ -30,7 +30,7 @@ export default function WatchlistPanel({ items, onAdd, onRemove }: Props) {
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Brand, keyword, allergen…"
-          className="flex-1 border dark:border-zinc-600 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-500"
+          className="flex-1 border dark:border-zinc-600 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
         />
         <button type="submit" className="px-3 py-2 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition min-h-[44px] min-w-[44px]">Add</button>
       </form>

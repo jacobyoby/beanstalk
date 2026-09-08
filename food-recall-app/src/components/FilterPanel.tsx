@@ -20,7 +20,7 @@ export default function FilterPanel({ classification, status, state, dietary, on
     <div className="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl p-4 space-y-3">
       <div className="flex justify-between items-center">
         <h2 className="font-semibold text-sm dark:text-zinc-100">Filters</h2>
-        <button onClick={onClear} className="text-xs underline text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-500 rounded min-h-[44px] min-w-[44px] px-3 py-2" aria-label="Clear all filters">Clear</button>
+        <button onClick={onClear} className="text-xs underline text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-600 rounded min-h-[44px] min-w-[44px] px-3 py-2" aria-label="Clear all filters">Clear</button>
       </div>
       <div>
         <label htmlFor="classification-select" className="text-xs font-medium dark:text-zinc-300">Classification</label>
