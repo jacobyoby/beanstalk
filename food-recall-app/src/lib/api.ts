@@ -1,5 +1,6 @@
 import type { Recall, RecallClassification } from '../types/recall'
 import { mockRecalls } from './mockData'
+import { buildDietaryPredicate, matchesDietaryConcerns, type DietaryConcern } from './dietary'
 
 interface OpenFDARecord {
   recall_number?: string
@@ -238,6 +239,7 @@ export async function fetchRecalls(params?: {
   classification?: string
   status?: string
   state?: string
+  dietary?: string[]
   signal?: AbortSignal
 }): Promise<FetchResult> {
   const limit = params?.limit ?? 20
@@ -246,6 +248,7 @@ export async function fetchRecalls(params?: {
   const classification = params?.classification || ''
   const status = params?.status || ''
   const state = params?.state || ''
+  const dietary = params?.dietary || []
   const apiKey = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_OPENFDA_KEY
   const predicates: string[] = []
   if (classification) predicates.push(`classification:"${sanitizeSearchQuery(classification)}"`)
@@ -254,12 +257,16 @@ export async function fetchRecalls(params?: {
     if (state === 'Nationwide') {
       predicates.push(`distribution_pattern:"Nationwide"`)
     } else {
-      // Include nationwide as potentially relevant to any state
       predicates.push(`(distribution_pattern:"${sanitizeSearchQuery(state)}" OR distribution_pattern:"Nationwide" OR distribution_pattern:"national")`)
     }
   }
+  if (dietary.length > 0) {
+    const dp = buildDietaryPredicate(dietary as DietaryConcern[])
+    if (dp) predicates.push(dp)
+  }
   const searchParam = buildSearchParam(search, predicates)
-  const cacheKey = `${sanitizeSearchQuery(search)}|${classification}|${status}|${state}|${limit}|${skip}`
+  const dietaryKey = (dietary as string[]).join(',')
+  const cacheKey = `${sanitizeSearchQuery(search)}|${classification}|${status}|${state}|${dietaryKey}|${limit}|${skip}`
   const cachedEntry = getCacheEntry(cacheKey)
   const cached = cachedEntry?.data ?? null
   const demo = isDemoMode()
@@ -280,6 +287,7 @@ export async function fetchRecalls(params?: {
     if (classification) filtered = filtered.filter(r => r.classification === classification)
     if (status) filtered = filtered.filter(r => r.status.toLowerCase() === status.toLowerCase())
     if (state) filtered = filtered.filter(r => matchesDistributionPattern(r.distributionPattern, state))
+    if (dietary.length > 0) filtered = filtered.filter(r => matchesDietaryConcerns(r, dietary as DietaryConcern[]))
     const total = filtered.length
     const paged = filtered.slice(skip, skip + limit)
     return { recalls: paged, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: true }

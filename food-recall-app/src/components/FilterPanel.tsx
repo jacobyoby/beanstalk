@@ -1,17 +1,21 @@
 import type { RecallClassification } from '../types/recall'
 import StateFilter from './StateFilter'
+import DietaryFilter from './DietaryFilter'
+import type { DietaryConcern } from '../lib/dietary'
 
 interface Props {
   classification: string
   status: string
   state: string
+  dietary: DietaryConcern[]
   onClassification: (v: RecallClassification | '') => void
   onStatus: (v: string) => void
   onState: (v: string) => void
+  onDietary: (v: DietaryConcern[]) => void
   onClear: () => void
 }
 
-export default function FilterPanel({ classification, status, state, onClassification, onStatus, onState, onClear }: Props) {
+export default function FilterPanel({ classification, status, state, dietary, onClassification, onStatus, onState, onDietary, onClear }: Props) {
   return (
     <div className="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl p-4 space-y-3">
       <div className="flex justify-between items-center">
@@ -45,6 +49,7 @@ export default function FilterPanel({ classification, status, state, onClassific
         </select>
       </div>
       <StateFilter selected={state} onChange={onState} />
+      <DietaryFilter selected={dietary} onChange={onDietary} />
     </div>
   )
 }
