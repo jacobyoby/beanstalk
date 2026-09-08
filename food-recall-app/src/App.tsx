@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import type { Recall, RecallClassification } from './types/recall'
 import { fetchRecalls, getLastSynced, type FetchError } from './lib/api'
 import RecallCard from './components/RecallCard'
@@ -25,23 +25,44 @@ export default function App(){
   const [lastSynced,setLastSynced]=useState<string|null>(getLastSynced())
   const { items: watchlist } = useWatchlist()
   const limit=6
+  const [reloadKey,setReloadKey]=useState(0)
+  const requestIdRef = useRef(0)
+  const abortRef = useRef<AbortController | null>(null)
+  const triggerReload = ()=> setReloadKey(k=>k+1)
 
   useEffect(()=>{ const t=setTimeout(()=>setDebounced(query),400); return ()=>clearTimeout(t)},[query])
 
-  async function load(){
+  useEffect(()=>{
+    // Reset page atomically on filter/search change without sending obsolete offset
+    setPage(prev => {
+      if (prev !== 0) return 0
+      return prev
+    })
+  },[classification, status, state, debounced])
+
+  useEffect(()=>{
+    const requestId = ++requestIdRef.current
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
     setLoading(true)
     setError(null)
-    const {recalls: data, total: t, error: err, isStale: stale, isDemo: demo} = await fetchRecalls({search: debounced, limit, skip: page*limit, classification, status, state})
-    setRecalls(data)
-    setTotal(t)
-    setError(err)
-    setIsStale(stale)
-    setIsDemo(demo)
-    setLastSynced(getLastSynced())
-    setLoading(false)
-  }
-  useEffect(()=>{ load() },[debounced, page, classification, status, state])
-  useEffect(()=>{ setPage(0) },[classification, status, state, debounced])
+    fetchRecalls({search: debounced, limit, skip: page*limit, classification, status, state, signal: controller.signal}).then(({recalls: data, total: t, error: err, isStale: stale, isDemo: demo})=>{
+      if (requestId !== requestIdRef.current) return
+      if (controller.signal.aborted) return
+      setRecalls(data)
+      setTotal(t)
+      setError(err)
+      setIsStale(stale)
+      setIsDemo(demo)
+      setLastSynced(getLastSynced())
+      setLoading(false)
+    }).catch(()=>{
+      if (requestId !== requestIdRef.current) return
+      setLoading(false)
+    })
+    return ()=> controller.abort()
+  },[debounced, page, classification, status, state, reloadKey])
 
   const totalPages = Math.max(1, Math.ceil(total/limit))
 
@@ -59,7 +80,7 @@ export default function App(){
           </div>
         </div>
         {isDemo && <div className="bg-purple-600 text-white text-center text-sm py-2">DEMO MODE — Fictional data for testing, not real FDA recalls. Add ?demo=1 to URL.</div>}
-        {isStale && <div className="bg-amber-600 text-white text-center text-sm py-2">Stale cached data — live FDA request failed ({error?.code}). <button onClick={load} className="underline">Retry</button></div>}
+        {isStale && <div className="bg-amber-600 text-white text-center text-sm py-2">Stale cached data — live FDA request failed ({error?.code}). <button onClick={triggerReload} className="underline">Retry</button></div>}
       </header>
 
       <main id="main-content" className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
@@ -80,7 +101,7 @@ export default function App(){
             {!loading && error && !isStale && recalls.length===0 && (
               <div className="text-center py-12">
                 <p className="text-zinc-600" role="alert">Failed to load recalls: {error.message} ({error.code})</p>
-                {error.retryable && <button onClick={load} className="mt-3 px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">Retry</button>}
+                {error.retryable && <button onClick={triggerReload} className="mt-3 px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">Retry</button>}
                 <p className="text-xs text-zinc-500 mt-2">{error.code === 'RATE_LIMIT' ? 'Rate limited — please retry shortly' : error.code === 'TIMEOUT' ? 'Request timed out after 8s' : 'Check connection and retry'}</p>
               </div>
             )}

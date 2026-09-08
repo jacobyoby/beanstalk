@@ -146,9 +146,13 @@ export type FetchResult = {
 
 const FETCH_TIMEOUT_MS = 8000
 
-async function fetchWithTimeout(url: string, timeoutMs = FETCH_TIMEOUT_MS): Promise<Response> {
+async function fetchWithTimeout(url: string, timeoutMs = FETCH_TIMEOUT_MS, outerSignal?: AbortSignal): Promise<Response> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), timeoutMs)
+  if (outerSignal) {
+    if (outerSignal.aborted) controller.abort()
+    else outerSignal.addEventListener('abort', () => controller.abort(), { once: true })
+  }
   try {
     const res = await fetch(url, { signal: controller.signal })
     return res
@@ -177,6 +181,7 @@ export async function fetchRecalls(params?: {
   classification?: string
   status?: string
   state?: string
+  signal?: AbortSignal
 }): Promise<FetchResult> {
   const limit = params?.limit ?? 20
   const skip = params?.skip ?? 0
@@ -216,13 +221,17 @@ export async function fetchRecalls(params?: {
   }
 
   try {
+    if (params?.signal?.aborted) {
+      const err: FetchError = { code: 'NETWORK', message: 'Aborted', retryable: false }
+      return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+    }
     let url = `https://api.fda.gov/food/enforcement.json?limit=${limit}&skip=${skip}`
     if (searchParam) {
       url += `&search=${encodeURIComponent(searchParam)}`
     }
     if (apiKey) url += `&api_key=${encodeURIComponent(apiKey)}`
 
-    const res = await fetchWithTimeout(url)
+    const res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS, params?.signal)
     if (!res.ok) {
       let body: unknown = null
       try { body = await res.json() } catch { body = null }
