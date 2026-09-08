@@ -24,6 +24,8 @@ export default function StateFilter({ selected, onChange }: Props) {
           <option key={s} value={s}>{s}</option>
         ))}
       </select>
+      <p className="text-xs text-zinc-500 mt-1">Matches reported distribution_pattern (bounded, not firm location). Nationwide is potentially relevant to any state; source text preserved.</p>
+      <p className="text-xs text-zinc-500">Unclear/region-only shown as “unclear” — initial distribution may omit downstream coverage.</p>
     </div>
   )
 }
