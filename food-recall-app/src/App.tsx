@@ -82,13 +82,13 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-amber-600 text-white px-3 py-2 rounded">Skip to content</a>
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-amber-700 text-white px-3 py-2 rounded">Skip to content</a>
       <header className="sticky top-0 z-10 bg-white border-b shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900">Food Recall Tracker</h1>
             <p className="text-sm text-zinc-600">
-              FDA Enforcement Reports (archival) • Sorted by report_date newest first • {isDemo ? 'DEMO — Fictional' : isStale ? 'Stale cached' : error ? `Error: ${error.code}` : 'Live'} • {lastSynced ? `Retrieved ${new Date(lastSynced).toLocaleString()}` : 'No sync yet'} {import.meta.env.VITE_OPENFDA_KEY ? '• 🔑 key' : '• no key (40/min)'}
+              FDA Enforcement Reports (archival) • Sorted by report_date newest first • {isDemo ? 'DEMO — Fictional' : isStale ? 'Stale cached' : error ? `Error: ${error.code}` : 'Live'} • {lastSynced ? `Retrieved ${new Date(lastSynced).toLocaleString()}` : 'No sync yet'} • Key via server proxy (not in bundle)
             </p>
             <p className="text-xs text-zinc-500 mt-1">Source: openFDA Food Enforcement (2004-present). Status is FDA-reported, not verified real-time lifecycle. Not for public safety alerts.</p>
           </div>
@@ -97,7 +97,7 @@ export default function App() {
           </div>
         </div>
         {isDemo && <div className="bg-purple-600 text-white text-center text-sm py-2">DEMO MODE — Fictional data, not real FDA recalls. Add ?demo=1 to URL.</div>}
-        {isStale && <div className="bg-amber-600 text-white text-center text-sm py-2">Stale cached data — live FDA request failed ({error?.code}). <button onClick={triggerReload} className="underline">Retry</button> <span className="opacity-80">• Cached from {lastSynced ? new Date(lastSynced).toLocaleString() : 'unknown'}</span></div>}
+        {isStale && <div className="bg-amber-700 text-white text-center text-sm py-2" role="status">Stale cached data — live FDA request failed ({error?.code}). <button onClick={triggerReload} className="underline">Retry</button> <span className="opacity-80">• Cached from {lastSynced ? new Date(lastSynced).toLocaleString() : 'unknown'}</span></div>}
       </header>
 
       <main id="main-content" className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
@@ -119,7 +119,7 @@ export default function App() {
             {!loading && error && !isStale && recalls.length===0 && (
               <div className="text-center py-12">
                 <p className="text-zinc-600" role="alert">Failed to load recalls: {error.message} ({error.code})</p>
-                {error.retryable && <button onClick={triggerReload} className="mt-3 px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">Retry</button>}
+                {error.retryable && <button onClick={triggerReload} className="mt-3 px-4 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-600">Retry</button>}
               </div>
             )}
             {!loading && !error && recalls.length===0 && <p className="text-zinc-600 text-center py-12" role="status">No recalls match your filters.</p>}
@@ -129,9 +129,9 @@ export default function App() {
                   {recalls.map(r=> <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={isNewRecall(r.recallInitiationDate)} watchlist={watchlist} dietary={dietary} />)}
                 </div>
                 <div className="flex items-center justify-between mt-6">
-                  <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Previous page">Previous</button>
+                  <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-600" aria-label="Previous page">Previous</button>
                   <span className="text-sm text-zinc-600" aria-live="polite">Page {page+1} / {totalPages} • {total} results {isStale ? '(stale)' : ''}</span>
-                  <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-500" aria-label="Next page">Next</button>
+                  <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-2 border rounded-lg disabled:opacity-40 bg-white focus:outline-none focus:ring-2 focus:ring-amber-600" aria-label="Next page">Next</button>
                 </div>
                 <p className="text-xs text-zinc-500 text-center mt-2">Sorted by report_date desc • Dates shown are recall_initiation_date or report_date from FDA</p>
               </>
@@ -143,7 +143,7 @@ export default function App() {
       {selected && <RecallDetail recall={selected} onClose={()=>setSelected(null)} />}
 
       <footer className="border-t bg-white text-xs text-zinc-600 px-4 py-4 text-center">
-        Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank">openFDA Food Enforcement API</a> ({import.meta.env.VITE_OPENFDA_KEY ? '240/min with key' : '40/min — set VITE_OPENFDA_KEY for 240/min'}) • {isStale ? `Stale cached from ${lastSynced ? new Date(lastSynced).toLocaleDateString() : 'unknown'}` : lastSynced ? `Last retrieved ${new Date(lastSynced).toLocaleDateString()}` : 'No retrieval yet'} • Live vs cached distinguished per result set • Not medical advice.
+        Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank">openFDA Food Enforcement API</a> (key via server proxy, not in bundle; 40/min anonymously, higher with server env) • {isStale ? `Stale cached from ${lastSynced ? new Date(lastSynced).toLocaleDateString() : 'unknown'}` : lastSynced ? `Last retrieved ${new Date(lastSynced).toLocaleDateString()}` : 'No retrieval yet'} • Live vs cached distinguished per result set • Not medical advice.
       </footer>
     </div>
   )
