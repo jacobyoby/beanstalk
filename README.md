@@ -4,7 +4,9 @@ Explore FDA food recall records by product, company, and recall reason.
 
 Beanstalk brings recall descriptions, reported classifications, distribution text, and source links into a searchable browser interface. It is an early-stage research tool, with **v0.1 in development**.
 
-[Roadmap](https://github.com/jacobyoby/beanstalk/issues/24) · [v0.1 milestone](https://github.com/jacobyoby/beanstalk/milestone/1) · [Report an issue](https://github.com/jacobyoby/beanstalk/issues/new/choose) · [FDA data source](https://open.fda.gov/apis/food/enforcement/)
+[Try the demo](https://jacobyoby.github.io/beanstalk/) · [Roadmap](https://github.com/jacobyoby/beanstalk/issues/24) · [v0.1 milestone](https://github.com/jacobyoby/beanstalk/milestone/1) · [Report an issue](https://github.com/jacobyoby/beanstalk/issues/new/choose) · [FDA data source](https://open.fda.gov/apis/food/enforcement/)
+
+The hosted demo uses clearly labeled fictional records and requires no API key.
 
 ## Explore the records
 
