@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Redirecting...</title>
+  <script>
+    // GitHub Pages SPA redirect: preserve path and redirect to index.html
+    sessionStorage.redirect = location.href;
+    location.replace(location.pathname.replace(/^\/[^/]+/, '') + location.search + location.hash);
+  </script>
+</head>
+<body></body>
+</html>
