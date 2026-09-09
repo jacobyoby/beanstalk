@@ -37,7 +37,7 @@ export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary
         }
       }}
       aria-label={`View recall ${recall.recallNumber}: ${recall.productDescription}`}
-      className={`bg-white dark:bg-zinc-800 border rounded-xl p-4 hover:shadow-md cursor-pointer transition flex flex-col gap-2 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
+      className={`bg-white dark:bg-zinc-800 border rounded-xl p-4 hover:shadow-md cursor-pointer transition flex flex-col gap-2 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 ${
         isNew ? 'border-blue-400 dark:border-blue-500 ring-1 ring-blue-200 dark:ring-blue-800' : 'dark:border-zinc-700'
       }`}
     >
@@ -56,16 +56,16 @@ export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary
       </div>
       <h3 className="font-semibold text-sm leading-tight line-clamp-2 dark:text-zinc-100">{recall.productDescription}</h3>
       <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2">{recall.reasonForRecall}</p>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">{recall.recallingFirm} • {formatRecallDate(recall.recallInitiationDate)}</p>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">Dist: {recall.distributionPattern}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-400">{recall.recallingFirm} • {formatRecallDate(recall.recallInitiationDate)}</p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-400 truncate">Dist: {recall.distributionPattern}</p>
       {isWatched && matchedTerms.length > 0 && (
-        <p className="text-xs text-amber-600 dark:text-amber-400">Watch: {matchedTerms.join(', ')}</p>
+        <p className="text-xs text-amber-700 dark:text-amber-400">Watch: {matchedTerms.join(', ')}</p>
       )}
       {dietaryMatches.length > 0 && (
-        <p className="text-xs text-emerald-600 dark:text-emerald-400">Dietary: {dietaryMatches.map(m => `${m.concern} via ${m.field} (“${m.term}”)`).join(', ')}</p>
+        <p className="text-xs text-emerald-700 dark:text-emerald-400">Dietary: {dietaryMatches.map(m => `${m.concern} via ${m.field} (“${m.term}”)`).join(', ')}</p>
       )}
       {dietary.length > 0 && dietaryMatches.length === 0 && (
-        <p className="text-xs text-zinc-500">No dietary match — absence does not mean allergen-free</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400">No dietary match — absence does not mean allergen-free</p>
       )}
     </article>
   )

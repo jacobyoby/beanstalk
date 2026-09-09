@@ -9,7 +9,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     base,
-    // Hosted builds must never inherit an owner key from files or the shell.
     envDir: hosted ? false : undefined,
     envPrefix: hosted ? [] : 'VITE_',
     define: hosted ? { 'import.meta.env.VITE_DEMO': JSON.stringify(demo ? 'true' : 'false') } : undefined,
@@ -20,7 +19,7 @@ export default defineConfig(({ mode }) => {
         manifest: {
           name: demo ? 'Beanstalk Demo' : 'Beanstalk',
           short_name: 'Beanstalk',
-          description: demo ? 'Interactive food recall explorer with fictional sample records' : 'Explore FDA food recall records',
+          description: demo ? 'Interactive food recall explorer with fictional sample records' : 'Track FDA food recalls and get alerts',
           start_url: base,
           scope: base,
           theme_color: '#1d4535',
