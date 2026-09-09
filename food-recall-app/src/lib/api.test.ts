@@ -255,3 +255,68 @@ describe('distribution: bounded state recognition and nationwide', () => {
     expect(matchesDistributionPattern('CA', 'CA')).toBe(true)
   })
 })
+
+describe('SPA static host fallback (#90)', () => {
+  beforeEach(() => {
+    clearCache()
+    localStorage.clear()
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+  })
+
+  const goodJsonResponse = {
+    ok: true,
+    headers: new Headers({ 'content-type': 'application/json' }),
+    json: async () => ({
+      results: [{ recall_number: 'F-SPA-1', product_description: 'Direct', reason_for_recall: 'Hazard', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: 'CA' }],
+      meta: { results: { total: 1 } }
+    })
+  }
+
+  it('non-JSON 200 response (SPA shell) falls back to direct FDA URL', async () => {
+    const htmlResponse = {
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'text/html; charset=utf-8' }),
+      json: async () => { throw new SyntaxError('Unexpected token <') }
+    }
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(htmlResponse)      // proxy returns HTML
+      .mockResolvedValueOnce(goodJsonResponse)    // direct FDA returns JSON
+    vi.stubGlobal('fetch', fetchMock)
+
+    const res = await fetchRecalls({ search: '', limit: 6, skip: 0 })
+    expect(res.error).toBeNull()
+    expect(res.recalls.length).toBe(1)
+    expect(res.recalls[0].productDescription).toBe('Direct')
+    // Verify fetch was called twice: proxy then direct
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    const secondCallUrl = fetchMock.mock.calls[1][0] as string
+    expect(secondCallUrl).toContain('api.fda.gov/food/enforcement.json')
+  })
+
+  it('JSON parse failure returns MALFORMED, not NETWORK', async () => {
+    const badJsonResponse = {
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: async () => { throw new SyntaxError('Unexpected end of JSON input') }
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(badJsonResponse))
+
+    const res = await fetchRecalls({ search: '', limit: 6, skip: 0 })
+    expect(res.error?.code).toBe('MALFORMED')
+    expect(res.error?.retryable).toBe(true)
+    expect(res.recalls).toEqual([])
+  })
+
+  it('normal JSON 200 response works as before', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(goodJsonResponse))
+
+    const res = await fetchRecalls({ search: '', limit: 6, skip: 0 })
+    expect(res.error).toBeNull()
+    expect(res.recalls.length).toBe(1)
+    expect(res.recalls[0].productDescription).toBe('Direct')
+    expect(res.isDemo).toBe(false)
+  })
+})

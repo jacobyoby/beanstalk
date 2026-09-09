@@ -345,7 +345,13 @@ export async function fetchRecalls(params?: {
     let res: Response
     try {
       res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS, params?.signal)
-      if (!res.ok && res.status === 404 && proxyBase !== directBase && isBrowser) {
+      // SPA static hosts return 200 with text/html for unknown API routes.
+      // Detect non-JSON content-type and fall back to direct FDA URL.
+      // Only flag SPA catch-all when headers are present and explicitly non-JSON.
+      // If headers are absent (e.g. test mocks), assume the response is valid JSON.
+      const contentType = res.headers?.get?.('content-type') ?? null
+      const isSpaCatchAll = res.ok && contentType !== null && !contentType.includes('application/json')
+      if ((!res.ok && res.status === 404 || isSpaCatchAll) && proxyBase !== directBase && isBrowser) {
         const directUrl = `${directBase}?limit=${limit}&skip=${cappedSkip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ''}`
         res = await fetchWithTimeout(directUrl, FETCH_TIMEOUT_MS, params?.signal)
       }
@@ -372,7 +378,14 @@ export async function fetchRecalls(params?: {
       }
       return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
     }
-    const raw = await res.json()
+    let raw: unknown
+    try {
+      raw = await res.json()
+    } catch {
+      const err: FetchError = { code: 'MALFORMED', message: 'Invalid JSON in FDA response', retryable: true }
+      if (cached && cachedEntry) return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
+      return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+    }
     if (!raw || typeof raw !== 'object' || !Array.isArray((raw as any).results)) {
       const err: FetchError = { code: 'MALFORMED', message: 'Malformed FDA response: missing results array', retryable: true }
       if (cached && cachedEntry) return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
