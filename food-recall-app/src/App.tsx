@@ -115,7 +115,7 @@ export default function App() {
             <button onClick={toggleDark} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} className="px-3 py-2 border-zinc-400 dark:border-zinc-500 rounded-lg text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px]">{dark ? 'Light' : 'Dark'} mode</button>
           </div>
         </div>
-        {isDemo && <div className="bg-purple-600 text-white text-center text-sm py-2">DEMO MODE — Fictional data, not real FDA recalls. Add ?demo=1 to URL.</div>}
+        {isDemo && <div className="bg-purple-600 text-white text-center text-sm py-2" role="status">DEMO MODE — Fictional data, not real FDA recalls. Add ?demo=1 to URL.</div>}
         {isStale && <div className="bg-amber-700 text-white text-center text-sm py-2" role="status">Stale cached data — live FDA request failed ({error?.code}). <button onClick={triggerReload} className="underline">Retry</button> <span>• Cached from {lastSynced ? new Date(lastSynced).toLocaleString() : 'unknown'}</span></div>}
       </header>
 
@@ -176,7 +176,7 @@ export default function App() {
       {selected && <RecallDetail recall={selected} onClose={()=>setSelected(null)} />}
 
       <footer className="border-t bg-white dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-400 text-xs text-zinc-600 dark:text-zinc-400 px-4 py-4 text-center">
-        Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank">openFDA Food Enforcement</a> • FDA scope: Enforcement archive; verify with FDA before action. • Not medical advice.
+        Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank" rel="noopener noreferrer">openFDA Food Enforcement</a> • FDA scope: Enforcement archive; verify with FDA before action. • Not medical advice.
       </footer>
     </div>
   )
