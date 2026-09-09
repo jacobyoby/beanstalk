@@ -1,6 +1,8 @@
 import type { Recall, RecallClassification } from "../types/recall";
 import { buildDietaryPredicate, type DietaryConcern, matchesDietaryConcerns } from "./dietary";
 import { mockRecalls } from "./mockData";
+import { buildReasonCategoryPredicate, categorizeReason, isReasonCategory } from "./reasonCategory";
+import { STATE_NAMES } from "./usStates";
 
 interface OpenFDARecord {
   recall_number?: string;
@@ -97,59 +99,6 @@ export function sanitizeSearchQuery(query: string): string {
   return query.replace(/["\\]/g, "").trim();
 }
 
-const STATE_NAMES: Record<string, string> = {
-  AL: "Alabama",
-  AK: "Alaska",
-  AZ: "Arizona",
-  AR: "Arkansas",
-  CA: "California",
-  CO: "Colorado",
-  CT: "Connecticut",
-  DE: "Delaware",
-  FL: "Florida",
-  GA: "Georgia",
-  HI: "Hawaii",
-  ID: "Idaho",
-  IL: "Illinois",
-  IN: "Indiana",
-  IA: "Iowa",
-  KS: "Kansas",
-  KY: "Kentucky",
-  LA: "Louisiana",
-  ME: "Maine",
-  MD: "Maryland",
-  MA: "Massachusetts",
-  MI: "Michigan",
-  MN: "Minnesota",
-  MS: "Mississippi",
-  MO: "Missouri",
-  MT: "Montana",
-  NE: "Nebraska",
-  NV: "Nevada",
-  NH: "New Hampshire",
-  NJ: "New Jersey",
-  NM: "New Mexico",
-  NY: "New York",
-  NC: "North Carolina",
-  ND: "North Dakota",
-  OH: "Ohio",
-  OK: "Oklahoma",
-  OR: "Oregon",
-  PA: "Pennsylvania",
-  RI: "Rhode Island",
-  SC: "South Carolina",
-  SD: "South Dakota",
-  TN: "Tennessee",
-  TX: "Texas",
-  UT: "Utah",
-  VT: "Vermont",
-  VA: "Virginia",
-  WA: "Washington",
-  WV: "West Virginia",
-  WI: "Wisconsin",
-  WY: "Wyoming",
-};
-
 export function matchesDistributionPattern(distributionPattern: string, selectedState: string): boolean {
   if (!selectedState) return true;
   const pattern = distributionPattern.toLowerCase();
@@ -225,9 +174,19 @@ export function buildCacheKey(
   dietary: string[],
   limit: number,
   skip: number,
+  hazard: string,
 ): string {
   const sortedDietary = [...dietary].sort();
-  return JSON.stringify([sanitizeSearchQuery(search), classification, status, state, sortedDietary, limit, skip]);
+  return JSON.stringify([
+    sanitizeSearchQuery(search),
+    classification,
+    status,
+    state,
+    sortedDietary,
+    limit,
+    skip,
+    hazard,
+  ]);
 }
 
 interface CacheEntry {
@@ -356,6 +315,8 @@ export async function fetchRecalls(params?: {
   status?: string;
   state?: string;
   dietary?: string[];
+  /** Reason category name from reasonCategory.ts; filters reason_for_recall server-side. */
+  hazard?: string;
   signal?: AbortSignal;
 }): Promise<FetchResult> {
   const limit = params?.limit ?? 20;
@@ -365,8 +326,10 @@ export async function fetchRecalls(params?: {
   const status = params?.status || "";
   const state = params?.state || "";
   const dietary = params?.dietary || [];
+  const hazard = params?.hazard || "";
   const predicates: string[] = [];
   if (classification) predicates.push(`classification:"${sanitizeSearchQuery(classification)}"`);
+  if (hazard && isReasonCategory(hazard)) predicates.push(buildReasonCategoryPredicate(hazard));
   if (status) predicates.push(`status:"${sanitizeSearchQuery(status)}"`);
   if (state) {
     if (state === "Nationwide") {
@@ -400,7 +363,7 @@ export async function fetchRecalls(params?: {
       isDemo: false,
     };
   }
-  const cacheKey = buildCacheKey(search, classification, status, state, dietary, limit, cappedSkip);
+  const cacheKey = buildCacheKey(search, classification, status, state, dietary, limit, cappedSkip, hazard);
   const cachedEntry = getCacheEntry(cacheKey);
   const cached = cachedEntry?.data ?? null;
   const demo = isDemoMode();
@@ -422,6 +385,7 @@ export async function fetchRecalls(params?: {
     if (status) filtered = filtered.filter((r) => r.status.toLowerCase() === status.toLowerCase());
     if (state) filtered = filtered.filter((r) => matchesDistributionPattern(r.distributionPattern, state));
     if (dietary.length > 0) filtered = filtered.filter((r) => matchesDietaryConcerns(r, dietary as DietaryConcern[]));
+    if (hazard) filtered = filtered.filter((r) => categorizeReason(r.reasonForRecall) === hazard);
     const total = filtered.length;
     const paged = filtered.slice(cappedSkip, cappedSkip + limit);
     return { recalls: paged, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: true };

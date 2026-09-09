@@ -1,11 +1,25 @@
-import { useEffect, useRef } from "react";
-import { formatRecallDate } from "../lib/formatDate";
+import { type ReactNode, useEffect, useRef } from "react";
+import { formatRecallDate, toISODate } from "../lib/formatDate";
 import type { AdverseEvent } from "../types/event";
 import { FDA_EVENT_DISCLAIMER } from "../types/event";
 
 interface Props {
   event: AdverseEvent;
   onClose: () => void;
+}
+
+interface FactProps {
+  term: string;
+  children: ReactNode;
+}
+
+function Fact({ term, children }: FactProps) {
+  return (
+    <div className="grid grid-cols-[8.5rem_minmax(0,1fr)] gap-2 py-1.5">
+      <dt className="text-zinc-500 dark:text-zinc-400">{term}</dt>
+      <dd className="min-w-0 break-words">{children}</dd>
+    </div>
+  );
 }
 
 export default function EventDetail({ event, onClose }: Props) {
@@ -16,10 +30,19 @@ export default function EventDetail({ event, onClose }: Props) {
       .map((p) => p.nameBrand)
       .filter(Boolean)
       .join(", ") || "Unknown product";
+  const consumer =
+    [
+      event.consumer.gender,
+      event.consumer.age ? `${event.consumer.age}${event.consumer.ageUnit ? ` ${event.consumer.ageUnit}` : ""}` : "",
+    ]
+      .filter(Boolean)
+      .join(" · ") || "—";
 
   useEffect(() => {
     prevFocusRef.current = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === "Tab") {
@@ -41,20 +64,25 @@ export default function EventDetail({ event, onClose }: Props) {
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
       prevFocusRef.current?.focus();
     };
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-labelledby="event-title">
-      <div className="flex-1 bg-black/40" onClick={onClose} aria-hidden="true" />
-      <div className="w-full max-w-lg bg-paper dark:bg-zinc-900 h-full overflow-auto p-6 shadow-xl">
-        <div className="flex justify-between items-start gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-violet-700 dark:text-violet-300 mb-1">
-              Early signal · Unverified community report
-            </p>
-            <h2 id="event-title" className="font-display text-lg font-bold dark:text-zinc-100">
+    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="event-title">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
+      <div className="animate-slide-in relative flex h-full w-full max-w-xl flex-col bg-paper shadow-2xl motion-reduce:animate-none dark:bg-zinc-900">
+        <header className="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="chip chip-signal font-semibold">Early signal</span>
+              <span className="chip chip-neutral">Unverified community report</span>
+            </div>
+            <h2
+              id="event-title"
+              className="font-display text-xl font-semibold leading-snug text-zinc-900 dark:text-zinc-50"
+            >
               {brandNames}
             </h2>
           </div>
@@ -67,94 +95,90 @@ export default function EventDetail({ event, onClose }: Props) {
           >
             Close
           </button>
-        </div>
+        </header>
 
-        <div
-          className="mt-4 text-xs leading-relaxed text-violet-900 dark:text-violet-200 bg-violet-50 dark:bg-violet-950/50 border border-violet-200 dark:border-violet-800 rounded-lg p-3"
-          role="note"
-        >
-          <strong>Disclaimer:</strong> {FDA_EVENT_DISCLAIMER} This is not a recall.
-        </div>
+        <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5 text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">
+          <p
+            className="rounded-lg border border-violet-200 bg-violet-50 p-3 text-xs leading-relaxed text-violet-900 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-200"
+            role="note"
+          >
+            <strong>Disclaimer:</strong> {FDA_EVENT_DISCLAIMER} This is not a recall.
+          </p>
 
-        <dl className="mt-4 space-y-3 text-sm dark:text-zinc-300">
-          <div>
-            <dt className="font-semibold">Report #</dt>
-            <dd>{event.reportNumber || "—"}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Date started</dt>
-            <dd>{formatRecallDate(event.dateStarted) || "—"}</dd>
-          </div>
-          {event.dateCreated && (
-            <div>
-              <dt className="font-semibold">Date created</dt>
-              <dd>{formatRecallDate(event.dateCreated)}</dd>
-            </div>
-          )}
-          <div>
-            <dt className="font-semibold">Reactions</dt>
-            <dd>{event.reactions.length ? event.reactions.join(", ") : "—"}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Outcomes</dt>
-            <dd>{event.outcomes.length ? event.outcomes.join(", ") : "—"}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Consumer</dt>
-            <dd>
-              {[
-                event.consumer.gender,
-                event.consumer.age
-                  ? `${event.consumer.age}${event.consumer.ageUnit ? ` ${event.consumer.ageUnit}` : ""}`
-                  : "",
-              ]
-                .filter(Boolean)
-                .join(" · ") || "—"}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Products</dt>
-            <dd className="space-y-2">
-              {event.products.length === 0 && "—"}
+          <section className="space-y-2">
+            <h3 className="label">Report</h3>
+            <dl className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <Fact term="Report #">{event.reportNumber || "—"}</Fact>
+              <Fact term="Date started">
+                {event.dateStarted ? (
+                  <time dateTime={toISODate(event.dateStarted)}>{formatRecallDate(event.dateStarted)}</time>
+                ) : (
+                  "—"
+                )}
+              </Fact>
+              {event.dateCreated && (
+                <Fact term="Date created">
+                  <time dateTime={toISODate(event.dateCreated)}>{formatRecallDate(event.dateCreated)}</time>
+                </Fact>
+              )}
+              <Fact term="Consumer">{consumer}</Fact>
+            </dl>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="label">Reactions and outcomes</h3>
+            <dl className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <Fact term="Reactions">{event.reactions.length ? event.reactions.join(", ") : "—"}</Fact>
+              <Fact term="Outcomes">{event.outcomes.length ? event.outcomes.join(", ") : "—"}</Fact>
+            </dl>
+          </section>
+
+          <section className="space-y-2">
+            <h3 className="label">Products</h3>
+            {event.products.length === 0 && <p>—</p>}
+            <ul className="space-y-2">
               {event.products.map((p) => (
-                <div
+                <li
                   key={`${p.nameBrand}-${p.role}-${p.industryCode}-${p.industryName}`}
-                  className="border dark:border-zinc-600 rounded-lg p-2 bg-zinc-50 dark:bg-zinc-900 text-xs"
+                  className="rounded-lg border border-zinc-200 bg-zinc-50 p-3 text-xs dark:border-zinc-800 dark:bg-zinc-950"
                 >
-                  <p className="font-medium dark:text-zinc-100">{p.nameBrand || "Unnamed product"}</p>
+                  <p className="font-medium text-zinc-900 dark:text-zinc-50">{p.nameBrand || "Unnamed product"}</p>
                   <p className="text-zinc-500 dark:text-zinc-400">
                     {[p.role, p.industryName, p.industryCode ? `code ${p.industryCode}` : ""]
                       .filter(Boolean)
                       .join(" · ") || "No industry details"}
                   </p>
-                </div>
+                </li>
               ))}
-            </dd>
-          </div>
-        </dl>
+            </ul>
+          </section>
 
-        <a
-          href="https://www.fda.gov/food/compliance-enforcement-food/cfsan-adverse-event-reporting-system-caers"
-          target="_blank"
-          rel="noreferrer"
-          className="mt-6 inline-block text-sm underline text-violet-700 dark:text-violet-400"
-        >
-          About FDA CAERS →
-        </a>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-          Developer:{" "}
-          <a
-            href={`https://api.fda.gov/food/event.json?search=report_number:"${encodeURIComponent(event.reportNumber)}"`}
-            target="_blank"
-            rel="noreferrer"
-            className="underline"
-          >
-            raw openFDA JSON
-          </a>
-        </p>
-        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-4 border-t dark:border-zinc-700 pt-3">
-          {FDA_EVENT_DISCLAIMER}
-        </p>
+          <section className="space-y-2">
+            <h3 className="label">Source</h3>
+            <p>
+              <a
+                href="https://www.fda.gov/food/compliance-enforcement-food/cfsan-adverse-event-reporting-system-caers"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-[44px] items-center font-medium text-violet-800 underline underline-offset-2 dark:text-violet-300"
+              >
+                About FDA CAERS →
+              </a>
+            </p>
+            <p className="hint">
+              Developer:{" "}
+              <a
+                href={`https://api.fda.gov/food/event.json?search=report_number:"${encodeURIComponent(event.reportNumber)}"`}
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                raw openFDA JSON
+              </a>
+            </p>
+            <p className="hint">{FDA_EVENT_DISCLAIMER}</p>
+          </section>
+        </div>
       </div>
     </div>
   );

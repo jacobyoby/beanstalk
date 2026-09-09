@@ -1,8 +1,11 @@
-import { useEffect, useRef } from "react";
-import { formatRecallDate } from "../lib/formatDate";
+import { type ReactNode, useEffect, useRef } from "react";
+import { riskLevel } from "../lib/classification";
+import { formatRecallDate, toISODate } from "../lib/formatDate";
+import { categorizeReason, hazardLabel } from "../lib/reasonCategory";
 import type { AdverseEvent } from "../types/event";
 import { OPENFDA_AS_PUBLISHED, type Recall } from "../types/recall";
 import RelatedEvents from "./RelatedEvents";
+import RiskBadge from "./RiskBadge";
 
 interface Props {
   recall: Recall;
@@ -10,12 +13,75 @@ interface Props {
   onSelectEvent?: (event: AdverseEvent) => void;
 }
 
+interface SectionProps {
+  title: string;
+  children: ReactNode;
+}
+
+function Section({ title, children }: SectionProps) {
+  return (
+    <section className="space-y-2">
+      <h3 className="label">{title}</h3>
+      <div className="text-sm leading-relaxed text-zinc-800 dark:text-zinc-200">{children}</div>
+    </section>
+  );
+}
+
+interface FactProps {
+  term: string;
+  children: ReactNode;
+}
+
+function Fact({ term, children }: FactProps) {
+  return (
+    <div className="grid grid-cols-[8.5rem_minmax(0,1fr)] gap-2 py-1.5">
+      <dt className="text-zinc-500 dark:text-zinc-400">{term}</dt>
+      <dd className="min-w-0 break-words">{children}</dd>
+    </div>
+  );
+}
+
+interface CodeBlockProps {
+  text: string;
+  source: string;
+}
+
+function CodeBlock({ text, source }: CodeBlockProps) {
+  return (
+    <div>
+      <pre
+        className="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg border border-zinc-200 bg-zinc-50 p-3 font-mono text-xs text-zinc-800 select-text focus:outline-hidden focus:ring-2 focus:ring-emerald-600 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200"
+        tabIndex={0}
+      >
+        {text}
+      </pre>
+      <p className="hint mt-1">Source: FDA {source}</p>
+    </div>
+  );
+}
+
+interface DateFactProps {
+  term: string;
+  raw: string;
+}
+
+function DateFact({ term, raw }: DateFactProps) {
+  return (
+    <Fact term={term}>
+      <time dateTime={toISODate(raw)}>{formatRecallDate(raw)}</time>
+    </Fact>
+  );
+}
+
 export default function RecallDetail({ recall, onClose, onSelectEvent }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null);
   const prevFocusRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
     prevFocusRef.current = document.activeElement as HTMLElement | null;
     closeRef.current?.focus();
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
       if (e.key === "Tab") {
@@ -27,27 +93,54 @@ export default function RecallDetail({ recall, onClose, onSelectEvent }: Props) 
         const last = focusable[focusable.length - 1];
         if (e.shiftKey && document.activeElement === first) {
           e.preventDefault();
-          (last as HTMLElement).focus();
+          last.focus();
         } else if (!e.shiftKey && document.activeElement === last) {
           e.preventDefault();
-          (first as HTMLElement).focus();
+          first.focus();
         }
       }
     };
     document.addEventListener("keydown", onKey);
     return () => {
       document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = previousOverflow;
       prevFocusRef.current?.focus();
     };
   }, [onClose]);
+
+  const risk = riskLevel(recall.classification);
+  const category = categorizeReason(recall.reasonForRecall);
+  const hazard = hazardLabel(recall.reasonForRecall);
+  const firmLocation = [recall.city, recall.state].filter(Boolean).join(", ");
+  const hasAddress = Boolean(recall.address1 || recall.postalCode);
+  const address = [recall.address1, recall.address2, `${recall.city}, ${recall.state} ${recall.postalCode}`]
+    .filter(Boolean)
+    .join(", ");
+  const classificationNote =
+    recall.rawClassification && recall.rawClassification !== recall.classification
+      ? ` (FDA value: “${recall.rawClassification}”)`
+      : "";
+  const statusNote =
+    recall.rawStatus && recall.rawStatus !== recall.status ? ` (FDA value: “${recall.rawStatus}”)` : "";
+
   return (
-    <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-labelledby="recall-title">
-      <div className="flex-1 bg-black/40" onClick={onClose} aria-hidden="true" />
-      <div className="w-full max-w-lg bg-paper dark:bg-zinc-900 h-full overflow-auto p-6 shadow-xl">
-        <div className="flex justify-between items-start gap-4">
-          <h2 id="recall-title" className="font-display text-lg font-bold dark:text-zinc-100">
-            {recall.productDescription}
-          </h2>
+    <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="recall-title">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} aria-hidden="true" />
+      <div className="animate-slide-in relative flex h-full w-full max-w-xl flex-col bg-paper shadow-2xl motion-reduce:animate-none dark:bg-zinc-900">
+        <header className="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
+          <div className="min-w-0 space-y-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <RiskBadge classification={recall.classification} showClass={false} />
+              {category && <span className="chip chip-neutral">{category}</span>}
+              {hazard && <span className="chip chip-neutral font-semibold">{hazard}</span>}
+            </div>
+            <h2
+              id="recall-title"
+              className="font-display text-xl font-semibold leading-snug text-zinc-900 dark:text-zinc-50"
+            >
+              {recall.productDescription}
+            </h2>
+          </div>
           <button
             type="button"
             ref={closeRef}
@@ -57,132 +150,116 @@ export default function RecallDetail({ recall, onClose, onSelectEvent }: Props) 
           >
             Close
           </button>
-        </div>
-        <dl className="mt-4 space-y-3 text-sm dark:text-zinc-300">
-          <div>
-            <dt className="font-semibold">Recall #</dt>
-            <dd>
-              {recall.recallNumber} (Event {recall.eventId})
-            </dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Classification</dt>
-            <dd>{recall.classification}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Status</dt>
-            <dd>{recall.status}</dd>
-            <dd className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{OPENFDA_AS_PUBLISHED}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Reason</dt>
-            <dd>{recall.reasonForRecall}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Firm</dt>
-            <dd>
-              {recall.recallingFirm} — {recall.city}, {recall.state}
-            </dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Distribution</dt>
-            <dd>{recall.distributionPattern}</dd>
-          </div>
-          <div>
-            <dt className="font-semibold">Code Info</dt>
-            <dd
-              className="whitespace-pre-wrap break-words max-h-64 overflow-auto border-zinc-400 rounded p-2 bg-zinc-50 dark:bg-zinc-900 text-xs select-text"
-              tabIndex={0}
-            >
-              {recall.codeInfo || "—"}
-            </dd>
-            <dd className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Source: FDA code_info</dd>
-          </div>
-          {recall.moreCodeInfo && (
-            <div>
-              <dt className="font-semibold">More Code Info (continuation)</dt>
-              <dd
-                className="whitespace-pre-wrap break-words max-h-64 overflow-auto border-zinc-400 rounded p-2 bg-zinc-50 dark:bg-zinc-900 text-xs select-text"
-                tabIndex={0}
+        </header>
+
+        <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
+          <Section title="Why it was recalled">
+            <p>{recall.reasonForRecall || "Not stated"}</p>
+            <p className="hint mt-2">{risk.definition}</p>
+          </Section>
+
+          <Section title="Where it was sold">
+            <p>{recall.distributionPattern || "Not stated"}</p>
+          </Section>
+
+          <Section title="How to identify it">
+            {recall.codeInfo ? (
+              <CodeBlock text={recall.codeInfo} source="code_info" />
+            ) : (
+              <p className="text-zinc-500 dark:text-zinc-400">—</p>
+            )}
+            {recall.moreCodeInfo && (
+              <div className="mt-3">
+                <p className="mb-1 text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                  More Code Info (continuation)
+                </p>
+                <CodeBlock text={recall.moreCodeInfo} source="more_code_info" />
+              </div>
+            )}
+            {recall.productQuantity && (
+              <dl className="mt-2 divide-y divide-zinc-100 dark:divide-zinc-800">
+                <Fact term="Quantity">{recall.productQuantity}</Fact>
+              </dl>
+            )}
+          </Section>
+
+          <Section title="Who recalled it">
+            <dl className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <Fact term="Firm">
+                {recall.recallingFirm || "Not stated"}
+                {firmLocation && ` · ${firmLocation}`}
+              </Fact>
+              {hasAddress && <Fact term="Firm Address">{address}</Fact>}
+              <Fact term="Voluntary/Mandated">{recall.voluntaryMandated || "Not stated"}</Fact>
+              {recall.initialFirmNotification && <Fact term="Firm Notification">{recall.initialFirmNotification}</Fact>}
+            </dl>
+          </Section>
+
+          <Section title="Timeline">
+            <dl className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              {recall.recallInitiationDate ? (
+                <DateFact term="Initiation Date" raw={recall.recallInitiationDate} />
+              ) : (
+                <Fact term="Initiation Date">Not stated</Fact>
+              )}
+              {recall.centerClassificationDate && (
+                <DateFact term="FDA Classification Date" raw={recall.centerClassificationDate} />
+              )}
+              {recall.terminationDate && <DateFact term="Termination Date" raw={recall.terminationDate} />}
+            </dl>
+          </Section>
+
+          <Section title="Record">
+            <dl className="divide-y divide-zinc-100 dark:divide-zinc-800">
+              <Fact term="Recall #">{recall.recallNumber || "Not stated"}</Fact>
+              <Fact term="Event">{recall.eventId || "Not stated"}</Fact>
+              <Fact term="Classification">
+                {recall.classification}
+                {classificationNote}
+              </Fact>
+              <Fact term="Status">
+                <span className="block">
+                  {recall.status}
+                  {statusNote}
+                </span>
+                <span className="hint block">{OPENFDA_AS_PUBLISHED}</span>
+              </Fact>
+            </dl>
+            <p className="mt-3">
+              <a
+                href={`https://www.accessdata.fda.gov/scripts/ires/index.cfm?Product=${encodeURIComponent(
+                  recall.productDescription.slice(0, 80),
+                )}#tabNav_advancedSearch`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-[44px] items-center font-medium text-emerald-800 underline underline-offset-2 dark:text-emerald-300"
               >
-                {recall.moreCodeInfo}
-              </dd>
-              <dd className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Source: FDA more_code_info</dd>
-            </div>
+                View on FDA Enforcement Reports →
+              </a>
+            </p>
+            <p className="hint">
+              Developer:{" "}
+              <a
+                href={`https://api.fda.gov/food/enforcement.json?search=recall_number:"${encodeURIComponent(recall.recallNumber)}"`}
+                target="_blank"
+                rel="noreferrer"
+                className="underline underline-offset-2"
+              >
+                raw openFDA JSON
+              </a>
+            </p>
+          </Section>
+
+          {onSelectEvent && (
+            <RelatedEvents
+              productDescription={recall.productDescription}
+              onSelectEvent={(event) => {
+                onClose();
+                onSelectEvent(event);
+              }}
+            />
           )}
-          <div>
-            <dt className="font-semibold">Initiation Date</dt>
-            <dd>{formatRecallDate(recall.recallInitiationDate)}</dd>
-          </div>
-          {recall.centerClassificationDate && (
-            <div>
-              <dt className="font-semibold">FDA Classification Date</dt>
-              <dd>{formatRecallDate(recall.centerClassificationDate)}</dd>
-            </div>
-          )}
-          {recall.terminationDate && (
-            <div>
-              <dt className="font-semibold">Termination Date</dt>
-              <dd>{formatRecallDate(recall.terminationDate)}</dd>
-            </div>
-          )}
-          {recall.productQuantity && (
-            <div>
-              <dt className="font-semibold">Quantity</dt>
-              <dd>{recall.productQuantity}</dd>
-            </div>
-          )}
-          {recall.initialFirmNotification && (
-            <div>
-              <dt className="font-semibold">Firm Notification</dt>
-              <dd>{recall.initialFirmNotification}</dd>
-            </div>
-          )}
-          {(recall.address1 || recall.postalCode) && (
-            <div>
-              <dt className="font-semibold">Firm Address</dt>
-              <dd>
-                {[recall.address1, recall.address2, `${recall.city}, ${recall.state} ${recall.postalCode}`]
-                  .filter(Boolean)
-                  .join(", ")}
-              </dd>
-            </div>
-          )}
-          <div>
-            <dt className="font-semibold">Voluntary/Mandated</dt>
-            <dd>{recall.voluntaryMandated}</dd>
-          </div>
-        </dl>
-        <a
-          href={`https://www.accessdata.fda.gov/scripts/ires/index.cfm?Product=${encodeURIComponent(
-            recall.productDescription.slice(0, 80),
-          )}#tabNav_advancedSearch`}
-          target="_blank"
-          rel="noreferrer"
-          className="mt-6 inline-block text-sm underline text-blue-600 dark:text-blue-400"
-        >
-          View on FDA Enforcement Reports →
-        </a>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
-          Developer:{" "}
-          <a
-            href={`https://api.fda.gov/food/enforcement.json?search=recall_number:"${encodeURIComponent(recall.recallNumber)}"`}
-            target="_blank"
-            rel="noreferrer"
-            className="underline"
-          >
-            raw openFDA JSON
-          </a>
-        </p>
-        {onSelectEvent && (
-          <RelatedEvents
-            productDescription={recall.productDescription}
-            onSelectEvent={(event) => {
-              onClose();
-              onSelectEvent(event);
-            }}
-          />
-        )}
+        </div>
       </div>
     </div>
   );

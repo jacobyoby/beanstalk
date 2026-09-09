@@ -368,31 +368,37 @@ describe("distribution: bounded state recognition and nationwide", () => {
 describe("buildCacheKey — collision-free", () => {
   it("pipe in search term does not collide with separate classification field", () => {
     // "milk|Class II" as search + no classification vs "milk" + classification "Class II"
-    const keyA = buildCacheKey("milk|Class II", "", "", "", [], 20, 0);
-    const keyB = buildCacheKey("milk", "Class II", "", "", [], 20, 0);
+    const keyA = buildCacheKey("milk|Class II", "", "", "", [], 20, 0, "");
+    const keyB = buildCacheKey("milk", "Class II", "", "", [], 20, 0, "");
     expect(keyA).not.toBe(keyB);
   });
 
   it("unsorted dietary arrays produce the same cache key", () => {
-    const keyAB = buildCacheKey("", "", "", "", ["milk", "eggs"], 20, 0);
-    const keyBA = buildCacheKey("", "", "", "", ["eggs", "milk"], 20, 0);
+    const keyAB = buildCacheKey("", "", "", "", ["milk", "eggs"], 20, 0, "");
+    const keyBA = buildCacheKey("", "", "", "", ["eggs", "milk"], 20, 0, "");
     expect(keyAB).toBe(keyBA);
   });
 
   it("identical inputs produce identical keys", () => {
-    const a = buildCacheKey("milk", "Class I", "Ongoing", "CA", ["gluten"], 10, 5);
-    const b = buildCacheKey("milk", "Class I", "Ongoing", "CA", ["gluten"], 10, 5);
+    const a = buildCacheKey("milk", "Class I", "Ongoing", "CA", ["gluten"], 10, 5, "Pathogen");
+    const b = buildCacheKey("milk", "Class I", "Ongoing", "CA", ["gluten"], 10, 5, "Pathogen");
     expect(a).toBe(b);
   });
 
   it("different skip or limit produce different keys", () => {
-    const a = buildCacheKey("milk", "", "", "", [], 20, 0);
-    const b = buildCacheKey("milk", "", "", "", [], 20, 20);
+    const a = buildCacheKey("milk", "", "", "", [], 20, 0, "");
+    const b = buildCacheKey("milk", "", "", "", [], 20, 20, "");
+    expect(a).not.toBe(b);
+  });
+
+  it("hazard category is part of the key", () => {
+    const a = buildCacheKey("", "", "", "", [], 20, 0, "");
+    const b = buildCacheKey("", "", "", "", [], 20, 0, "Pathogen");
     expect(a).not.toBe(b);
   });
 
   it("sanitizes search query inside the key (strips quotes/backslashes)", () => {
-    const key = buildCacheKey('M&M "test"', "", "", "", [], 20, 0);
+    const key = buildCacheKey('M&M "test"', "", "", "", [], 20, 0, "");
     expect(key).not.toContain('"test"');
     expect(key).toContain("M&M test");
   });
