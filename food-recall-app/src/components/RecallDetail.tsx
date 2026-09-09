@@ -1,13 +1,16 @@
 import { useEffect, useRef } from 'react'
 import type { Recall } from '../types/recall'
+import type { AdverseEvent } from '../types/event'
 import { formatRecallDate } from '../lib/formatDate'
+import RelatedEvents from './RelatedEvents'
 
 interface Props {
   recall: Recall
   onClose: () => void
+  onSelectEvent?: (event: AdverseEvent) => void
 }
 
-export default function RecallDetail({ recall, onClose }: Props) {
+export default function RecallDetail({ recall, onClose, onSelectEvent }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const prevFocusRef = useRef<HTMLElement | null>(null)
   useEffect(() => {
@@ -68,6 +71,15 @@ export default function RecallDetail({ recall, onClose }: Props) {
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
           Developer: <a href={`https://api.fda.gov/food/enforcement.json?search=recall_number:"${recall.recallNumber}"`} target="_blank" rel="noreferrer" className="underline">raw openFDA JSON</a>
         </p>
+        {onSelectEvent && (
+          <RelatedEvents
+            productDescription={recall.productDescription}
+            onSelectEvent={event => {
+              onClose()
+              onSelectEvent(event)
+            }}
+          />
+        )}
       </div>
     </div>
   )

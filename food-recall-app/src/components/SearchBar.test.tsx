@@ -10,7 +10,7 @@ describe('SearchBar', () => {
 
   it('renders input with placeholder', () => {
     render(<SearchBar value="" onChange={() => {}} />)
-    expect(screen.getByPlaceholderText('Product, reason, firm…')).toBeTruthy()
+    expect(screen.getByPlaceholderText('Product, reason, firm, reaction…')).toBeTruthy()
   })
 
   it('displays current value', () => {
@@ -21,7 +21,7 @@ describe('SearchBar', () => {
   it('calls onChange when typing', () => {
     const onChange = vi.fn()
     render(<SearchBar value="" onChange={onChange} />)
-    fireEvent.change(screen.getByPlaceholderText('Product, reason, firm…'), { target: { value: 'milk' } })
+    fireEvent.change(screen.getByPlaceholderText('Product, reason, firm, reaction…'), { target: { value: 'milk' } })
     expect(onChange).toHaveBeenCalledWith('milk')
   })
 

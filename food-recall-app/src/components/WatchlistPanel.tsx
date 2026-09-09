@@ -39,7 +39,7 @@ export default function WatchlistPanel({ items, onAdd, onRemove }: Props) {
       </form>
 
       {items.length === 0 && (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">Add keywords to get alerts when matching recalls appear.</p>
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">Add keywords to get alerts when matching recalls or adverse event reports appear.</p>
       )}
 
       <div className="flex flex-wrap gap-1.5">
