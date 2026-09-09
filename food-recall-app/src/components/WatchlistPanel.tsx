@@ -19,50 +19,54 @@ export default function WatchlistPanel({ items, onAdd, onRemove }: Props) {
   }
 
   return (
-    <div className="panel space-y-3 p-4">
-      <div className="flex items-center justify-between">
-        <h2 className="font-semibold text-sm dark:text-zinc-100">Watchlist</h2>
+    <div className="panel">
+      <div className="flex items-center justify-between px-4 py-3">
+        <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Watchlist</h2>
         <span className="hint">
           {items.length} term{items.length !== 1 ? "s" : ""}
         </span>
       </div>
 
-      <form onSubmit={handleSubmit} className="flex gap-2">
-        <label htmlFor="watchlist-input" className="sr-only">
-          Watchlist keyword
-        </label>
-        <input
-          id="watchlist-input"
-          aria-label="Watchlist keyword"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Brand, keyword, allergen…"
-          autoComplete="off"
-          className="input min-w-0 flex-1"
-        />
-        <button type="submit" className="btn btn-primary shrink-0">
-          Add
-        </button>
-      </form>
+      <div className="space-y-3 border-t border-zinc-100 px-4 py-4 dark:border-zinc-800">
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <label htmlFor="watchlist-input" className="sr-only">
+            Watchlist keyword
+          </label>
+          <input
+            id="watchlist-input"
+            aria-label="Watchlist keyword"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Brand, keyword, allergen…"
+            autoComplete="off"
+            className="input"
+          />
+          <button type="submit" className="btn btn-primary shrink-0">
+            Add
+          </button>
+        </form>
 
-      {items.length === 0 && (
-        <p className="hint italic">Add keywords to get alerts when matching recalls or adverse event reports appear.</p>
-      )}
+        {items.length === 0 && (
+          <p className="hint">Add keywords to get alerts when matching recalls or adverse event reports appear.</p>
+        )}
 
-      <div className="flex flex-wrap gap-1.5">
-        {items.map((term) => (
-          <span key={term} className="chip chip-personal pr-0.5">
-            {term}
-            <button
-              type="button"
-              onClick={() => onRemove(term)}
-              className="ml-0.5 flex h-6 w-6 items-center justify-center rounded text-indigo-700 hover:bg-indigo-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden dark:text-indigo-300 dark:hover:bg-indigo-900"
-              aria-label={`Remove ${term}`}
-            >
-              ×
-            </button>
-          </span>
-        ))}
+        {items.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5" aria-label="Watchlist terms">
+            {items.map((term) => (
+              <li key={term} className="chip chip-personal pr-0.5">
+                {term}
+                <button
+                  type="button"
+                  onClick={() => onRemove(term)}
+                  className="ml-0.5 flex h-6 w-6 items-center justify-center rounded text-indigo-700 hover:bg-indigo-100 hover:text-indigo-900 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 dark:text-indigo-300 dark:hover:bg-indigo-900"
+                  aria-label={`Remove ${term}`}
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );

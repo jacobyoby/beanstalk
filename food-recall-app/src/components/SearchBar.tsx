@@ -9,15 +9,14 @@ export default function SearchBar({ value, onChange }: Props) {
       <label htmlFor="search-input" className="label mb-1">
         Search
       </label>
-      <div className="search-shell relative">
+      <div className="relative">
         <svg
-          className="search-icon pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
           viewBox="0 0 20 20"
           fill="none"
           stroke="currentColor"
           strokeWidth="2"
           aria-hidden="true"
-          focusable="false"
         >
           <circle cx="9" cy="9" r="6" />
           <path d="M14 14l4 4" strokeLinecap="round" />
@@ -29,12 +28,19 @@ export default function SearchBar({ value, onChange }: Props) {
           onChange={(e) => onChange(e.target.value)}
           placeholder="Product, reason, firm, reaction…"
           autoComplete="off"
-          className="input pl-9"
+          className="input pl-9 pr-10"
         />
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 dark:hover:bg-zinc-800 dark:hover:text-zinc-100"
+            aria-label="Clear search"
+          >
+            ×
+          </button>
+        )}
       </div>
-      <p className="hint mt-1">
-        No matches → empty (openFDA 404). Records as published by openFDA, not a live FDA lifecycle.
-      </p>
     </div>
   );
 }

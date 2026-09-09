@@ -71,13 +71,14 @@ export default function StateFilter({ selected, onChange }: Props) {
           </option>
         ))}
       </select>
-      <p className="hint mt-1">
-        Matches reported distribution_pattern (bounded, not firm location). Nationwide is potentially relevant to any
-        state; source text preserved.
-      </p>
-      <p className="hint">
-        Unclear/region-only shown as “unclear” — initial distribution may omit downstream coverage.
-      </p>
+      <details className="hint mt-1">
+        <summary className="cursor-pointer select-none">How state matching works</summary>
+        <p className="mt-1">
+          Matches reported distribution_pattern (bounded, not firm location). Nationwide is potentially relevant to any
+          state; source text preserved.
+        </p>
+        <p>Unclear/region-only shown as “unclear” — initial distribution may omit downstream coverage.</p>
+      </details>
     </div>
   );
 }

@@ -97,6 +97,9 @@ body {
   .chip-personal {
     @apply bg-indigo-50 text-indigo-800 ring-indigo-200 dark:bg-indigo-950 dark:text-indigo-200 dark:ring-indigo-800;
   }
+  .chip-signal {
+    @apply bg-violet-50 text-violet-800 ring-violet-200 dark:bg-violet-950 dark:text-violet-200 dark:ring-violet-800;
+  }
   .hint {
     @apply text-xs leading-relaxed text-zinc-500 dark:text-zinc-400;
   }

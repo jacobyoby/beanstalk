@@ -19,3 +19,9 @@ export function isNewRecall(initiationDate: string, days = 30): boolean {
   cutoff.setDate(cutoff.getDate() - days);
   return recallDate >= cutoff;
 }
+
+/** Converts an FDA YYYYMMDD string to ISO YYYY-MM-DD for <time dateTime>; returns the input unchanged when it is not 8 digits. */
+export function toISODate(raw: string): string {
+  if (!/^\d{8}$/.test(raw)) return raw;
+  return `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+}
