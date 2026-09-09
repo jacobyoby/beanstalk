@@ -40,6 +40,10 @@ export default function App() {
   const firstLoadRef = useRef(true)
   const requestIdRef = useRef(0)
   const abortRef = useRef<AbortController | null>(null)
+  const watchlistRef = useRef(watchlist)
+  watchlistRef.current = watchlist
+  const notificationsEnabledRef = useRef(notificationsEnabled)
+  notificationsEnabledRef.current = notificationsEnabled
   const [reloadKey, setReloadKey] = useState(0)
   const triggerReload = () => setReloadKey(k => k + 1)
   const handleEnableNotifications = async () => {
@@ -91,19 +95,24 @@ export default function App() {
       // Notifications: only for newly observed, not for stale/demo/outbreak
       const newRecalls = data.filter(r => !seenIdsRef.current.has(r.id))
       if (newRecalls.length > 0 && !firstLoadRef.current && !stale && !demo && !err) {
-        const watched = newRecalls.filter(r => matchesWatchlist(`${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`, watchlist).length > 0)
-        if (watched.length > 0 && notificationsEnabled) {
+        const watched = newRecalls.filter(r => matchesWatchlist(`${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`, watchlistRef.current).length > 0)
+        if (watched.length > 0 && notificationsEnabledRef.current) {
           sendNotification(`${watched.length} newly observed recall${watched.length > 1 ? 's' : ''} matching watchlist`, watched.map(r => r.productDescription.slice(0, 80)).join('\n'))
         }
       }
       data.forEach(r => seenIdsRef.current.add(r.id))
+      // Cap seen IDs to prevent unbounded growth
+      if (seenIdsRef.current.size > 1000) {
+        const entries = [...seenIdsRef.current]
+        seenIdsRef.current = new Set(entries.slice(entries.length - 1000))
+      }
       firstLoadRef.current = false
     }).catch(() => {
       if (requestId !== requestIdRef.current) return
       setLoading(false)
     })
     return () => controller.abort()
-  }, [debounced, page, classification, status, state, dietary, reloadKey, watchlist, notificationsEnabled])
+  }, [debounced, page, classification, status, state, dietary, reloadKey])
 
   return (
     <div className="min-h-screen flex flex-col">

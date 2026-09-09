@@ -1,13 +1,14 @@
 # Beanstalk — Food Recall Tracker
 
-Responsive Food Recall app — search/filter FDA food recalls with openFDA + mock fallback.
+Responsive Food Recall app — search/filter FDA food recalls with openFDA data.
 
 ## Stack
 Vite + React 18 + TypeScript + Tailwind CSS
 
 ## Data
 - Primary: `https://api.fda.gov/food/enforcement.json` (paginated, no key required)
-- Fallback: `src/lib/mockData.ts` seeded with 2025-2026 major recalls (Jalapeños/Salmonella, Powdered Milk, Pasta/Listeria, undeclared allergens, plastic, Moringa)
+- Offline fallback: stale cached data from the last successful fetch (no automatic mock fallback)
+- Demo mode: add `?demo=1` to URL for fictional mock data (see `src/lib/mockData.ts`)
 
 ## Run
 ```bash
@@ -23,7 +24,7 @@ npm run preview
 - Recall list with search (debounced, product/reason/firm), classification & status filters, pagination
 - Recall detail drawer/slide-over
 - Tailwind styling, accessible controls
-- Graceful fallback to mock data when openFDA unreachable
+- Stale-cache fallback when openFDA is unreachable; optional demo mode via `?demo=1`
 
 ## Insights surfaced
 Pathogen contamination (~40-50% Salmonella) dominates 2025-2026; Class I recalls ~70%. Banner highlights 16 active FDA CORE investigations.
