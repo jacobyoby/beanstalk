@@ -1,9 +1,9 @@
 # Beanstalk
 
-FDA Food Recall Tracker — search and filter openFDA food enforcement records with provenance, dietary and state filters, and offline fallback.
+FDA Food Recall Tracker — search and filter openFDA food enforcement records and CAERS adverse event early signals, with provenance, dietary and state filters, and offline fallback.
 
 ## Scope
-v0.1: trustworthy recall search, accessible filters, watchlist, dark mode, PWA shell.
+v0.1: trustworthy recall search, Early Signals (unverified CAERS reports), accessible filters, watchlist, dark mode, PWA shell.
 
 ## Runtime
 Node 22, npm 10, Vite 5 + React 18 + TypeScript.
