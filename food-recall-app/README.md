@@ -3,7 +3,7 @@
 Search and filter food enforcement records **as published by openFDA**, with dietary concern matching, watchlist alerts, and an offline-capable PWA. Not a live FDA recall-lifecycle feed.
 
 ## Stack
-Vite + React 18 + TypeScript + Tailwind CSS v4 + PWA (Workbox)
+Vite + React 19 + TypeScript + Tailwind CSS v4 + PWA (Workbox)
 
 ## Data
 - **Primary recalls**: [openFDA Food Enforcement API](https://api.fda.gov/food/enforcement.json) — 29,000+ records **as published by openFDA** (not live FDA lifecycle), paginated
