@@ -56,27 +56,46 @@ export function clearFsisCache(): void {
   }
 }
 
+function decodeBasicEntities(text: string): string {
+  // Single-pass named/numeric entity decode to avoid double-unescape of &amp;lt; etc.
+  return text.replace(/&(#\d+|#x[\da-f]+|nbsp|amp|lt|gt|quot|apos);/gi, (entity, body: string) => {
+    const key = body.toLowerCase()
+    if (key === 'nbsp') return ' '
+    if (key === 'amp') return '&'
+    if (key === 'lt') return '<'
+    if (key === 'gt') return '>'
+    if (key === 'quot') return '"'
+    if (key === 'apos') return "'"
+    if (key.startsWith('#x')) {
+      const code = parseInt(key.slice(2), 16)
+      return Number.isFinite(code) ? String.fromCodePoint(code) : entity
+    }
+    if (key.startsWith('#')) {
+      const code = parseInt(key.slice(1), 10)
+      return Number.isFinite(code) ? String.fromCodePoint(code) : entity
+    }
+    return entity
+  })
+}
+
 function stripHtml(html: string): string {
-  return html
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<\/div>/gi, '\n')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\r/g, '')
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim()
+  return decodeBasicEntities(
+    html
+      .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
+      // Allow whitespace before '>' on closing tags (CodeQL bad-tag-filter)
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi, ' ')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style\b[^>]*>/gi, ' ')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<\/li>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\r/g, '')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/[ \t]{2,}/g, ' ')
+      .trim()
+  )
 }
 
 function tagContent(block: string, tag: string): string {

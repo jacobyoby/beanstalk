@@ -20,24 +20,43 @@ const RSS_URL =
   process.env.FSIS_RSS_URL ||
   'https://www.fsis.usda.gov/rss/food-recall-notification-and-destruction-orders-rss-feed.xml'
 
+function decodeBasicEntities(text) {
+  return String(text).replace(/&(#\d+|#x[\da-f]+|nbsp|amp|lt|gt|quot|apos);/gi, (entity, body) => {
+    const key = String(body).toLowerCase()
+    if (key === 'nbsp') return ' '
+    if (key === 'amp') return '&'
+    if (key === 'lt') return '<'
+    if (key === 'gt') return '>'
+    if (key === 'quot') return '"'
+    if (key === 'apos') return "'"
+    if (key.startsWith('#x')) {
+      const code = parseInt(key.slice(2), 16)
+      return Number.isFinite(code) ? String.fromCodePoint(code) : entity
+    }
+    if (key.startsWith('#')) {
+      const code = parseInt(key.slice(1), 10)
+      return Number.isFinite(code) ? String.fromCodePoint(code) : entity
+    }
+    return entity
+  })
+}
+
 function stripHtml(html) {
-  return String(html || '')
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n')
-    .replace(/<\/div>/gi, '\n')
-    .replace(/<\/li>/gi, '\n')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/[ \t]+\n/g, '\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim()
+  return decodeBasicEntities(
+    String(html || '')
+      .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/gi, '$1')
+      .replace(/<script\b[^>]*>[\s\S]*?<\/script\b[^>]*>/gi, ' ')
+      .replace(/<style\b[^>]*>[\s\S]*?<\/style\b[^>]*>/gi, ' ')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/p>/gi, '\n')
+      .replace(/<\/div>/gi, '\n')
+      .replace(/<\/li>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/[ \t]{2,}/g, ' ')
+      .trim()
+  )
 }
 
 function tagContent(block, tag) {

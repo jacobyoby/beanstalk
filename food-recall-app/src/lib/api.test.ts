@@ -96,7 +96,13 @@ describe('fetchRecalls — no synthetic fallback', () => {
 
   const isFsisUrl = (url: unknown) => {
     const s = String(url)
-    return s.includes('/api/fsis') || s.includes('fsis-recalls') || s.includes('fsis.usda.gov')
+    if (s.includes('/api/fsis') || s.includes('fsis-recalls.json')) return true
+    try {
+      const host = new URL(s, 'http://localhost').hostname
+      return host === 'www.fsis.usda.gov' || host === 'fsis.usda.gov'
+    } catch {
+      return false
+    }
   }
 
   const mockSuccess = (results: unknown[] = [{ recall_number: 'F-1', product_description: 'Real', reason_for_recall: 'Hazard', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: 'CA' }]) =>
