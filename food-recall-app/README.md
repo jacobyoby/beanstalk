@@ -1,46 +1,38 @@
 # Beanstalk — Food Recall Tracker
 
-Search and filter FDA + USDA FSIS food recalls and CAERS adverse event early signals, with real-time alerts, dietary concern matching, and offline-capable PWA.
+Search and filter FDA + USDA FSIS food recalls **as published by the source agencies**, plus CAERS adverse event early signals, with dietary concern matching, watchlist alerts, and an offline-capable PWA.
 
 ## Stack
 Vite + React 18 + TypeScript + Tailwind CSS + PWA (Workbox)
 
 ## Data
-- **Primary recalls (FDA)**: [openFDA Food Enforcement API](https://api.fda.gov/food/enforcement.json) — 29,000+ records, paginated
+- **Primary recalls (FDA)**: [openFDA Food Enforcement API](https://api.fda.gov/food/enforcement.json) — 29,000+ records **as published by openFDA** (not live FDA lifecycle), paginated
 - **USDA FSIS** (meat/poultry/egg): RSS feed `https://www.fsis.usda.gov/rss/food-recall-notification-and-destruction-orders-rss-feed.xml`
-  - No public REST API; browser CORS is blocked (EdgeCast CDN 403)
 - **Early Signals (CAERS)**: [openFDA Food Adverse Event API](https://api.fda.gov/food/event.json) — same proxy/auth/rate limits as enforcement
-- **API Key**: Optional via `VITE_OPENFDA_KEY` env var (increases rate limit from 40 to 240 req/min)
+- **Publish lag**: Dataset typically refreshes mid-week (Wednesday). Status fields are as published, not a current lifecycle.
+- **Empty search**: openFDA returns HTTP 404 + “No matches found” — the app shows an empty list, not an error.
+- **Pagination**: `skip` is capped at 25,000. `search_after` is not implemented; narrow filters to page further.
+- **Related Events**: parenthesized OR of product tokens ([#102](https://github.com/jacobyoby/beanstalk/pull/102)).
+- **API Key**: Optional via `OPENFDA_API_KEY` on the Vite/dev server proxy (increases FDA rate limit from 40 to 240 req/min)
 - **Cache**: 6-hour localStorage cache with LRU eviction for offline/stale serving
 - **Demo Mode**: Add `?demo=1` to URL for fictional test data
-- **Fallback**: `src/lib/mockData.ts` (FDA + FSIS recalls) and `src/lib/mockEvents.ts` (adverse events) when live sources are unreachable
-
-### USDA FSIS architecture (hybrid)
-1. **Dev**: Vite proxies raw RSS at `/api/fsis-rss/*` (CORS bypass). Client parses XML → `Recall` with `source: 'USDA'`.
-2. **Prod (static / GitHub Pages)**: `npm run prebuild` → `scripts/fetch-fsis.mjs` bakes `public/data/fsis-recalls.json`. Client loads same-origin static JSON.
-3. **Optional future serverless**: same-origin `GET /api/fsis/recalls` returning parsed JSON (Cloudflare Worker / Vercel). Client already probes this path first.
-
-FDA remains client-side (with optional key proxy). USDA never calls a public CORS proxy service.
+- **Fallback**: `src/lib/mockData.ts` (recalls) and `src/lib/mockEvents.ts` (adverse events) when openFDA is unreachable
 
 ## Run
 ```bash
 cd food-recall-app
 npm install
 npm run dev    # http://localhost:5173
-npm run fetch:fsis   # refresh public/data/fsis-recalls.json
-npm run build  # output: dist/ (includes baked FSIS JSON)
+npm run build  # output: dist/
 npm run test   # vitest (unit + component)
 ```
 
 ## Features
-- **Tabs**: **Recalls** (FDA openFDA + USDA FSIS enforcement) and **Early Signals** (unverified CAERS adverse event reports)
-- **Unified recall feed**: FDA + USDA FSIS, sorted by date, with FDA/USDA source badges on cards and detail
-- **Search**: Debounced cross-field search (product, reason, firm, brand, hazard, reaction) with grouped OR clauses
+- **Tabs**: **Recalls** (enforcement) and **Early Signals** (unverified CAERS adverse event reports)
+- **Search**: Debounced cross-field search (product, reason, firm, reaction) with grouped OR clauses
 - **Early Signals**: Search product brand / reactions / outcomes; FDA “not scientifically verified” disclaimer on every event surface; related CAERS links on recall detail
 - **Filters**: Classification (I/II/III), Status (Ongoing/Completed/Terminated), Distribution State, Dietary Concerns (14 allergen types with negation handling) — recall tab only
-- **Watchlist**: Save keywords for browser notification alerts when matching recalls (both sources: product, reason, firm, brand, hazard, headline) or adverse event reports appear
-- **Recall detail**: FSIS fields (establishment #, brand, hazard, FSIS link) plus FDA iRES / openFDA JSON links
-- **Graceful soft-fail**: FSIS outage does not block FDA results
+- **Watchlist**: Save keywords for browser notification alerts when matching recalls or adverse event reports appear
 - **Alerts**: Browser push notifications via Notification API, permission-gated
 - **PWA**: Installable, offline-capable with Workbox precaching and service worker
 - **Dark Mode**: OS-preference detection with manual toggle
@@ -49,8 +41,7 @@ npm run test   # vitest (unit + component)
 - **Demo**: `?demo=1` with conspicuously fictional recall and event data
 
 ## Test Coverage
-- `api.test.ts` — API fetching, caching, error handling, search clause building, FDA+FSIS merge
-- `fsis.test.ts` — FSIS RSS parse, host checks, merge/sort, watchlist fields, soft-fail
+- `api.test.ts` — API fetching, caching, error handling, search clause building
 - `events.test.ts` — CAERS mapping, search, errors, demo mode, related-event lookup
 - `dietary.test.ts` — Allergen matching, negation, predicate building
 - `RecallCard.test.tsx` — Rendering, interaction, a11y attributes
@@ -64,7 +55,7 @@ npm run test   # vitest (unit + component)
 ## Deploy
 Any static host (Vercel, Netlify, Cloudflare Pages, GitHub Pages):
 ```bash
-npm run build  # outputs dist/ (includes baked FSIS JSON)
+npm run build  # outputs dist/
 ```
 
 ## Environment Variables
