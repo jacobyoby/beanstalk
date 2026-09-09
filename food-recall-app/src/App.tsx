@@ -53,6 +53,10 @@ export default function App() {
   const firstLoadRef = useRef(true);
   const requestIdRef = useRef(0);
   const abortRef = useRef<AbortController | null>(null);
+  const watchlistRef = useRef(watchlist);
+  watchlistRef.current = watchlist;
+  const notificationsEnabledRef = useRef(notificationsEnabled);
+  notificationsEnabledRef.current = notificationsEnabled;
   const [reloadKey, setReloadKey] = useState(0);
   const triggerReload = () => setReloadKey((k) => k + 1);
   const handleEnableNotifications = async () => {
@@ -159,9 +163,10 @@ export default function App() {
         if (newRecalls.length > 0 && !firstLoadRef.current && !stale && !demo && !err) {
           const watched = newRecalls.filter(
             (r) =>
-              matchesWatchlist(`${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`, watchlist).length > 0,
+              matchesWatchlist(`${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`, watchlistRef.current)
+                .length > 0,
           );
-          if (watched.length > 0 && notificationsEnabled) {
+          if (watched.length > 0 && notificationsEnabledRef.current) {
             sendNotification(
               `${watched.length} newly observed recall${watched.length > 1 ? "s" : ""} matching watchlist`,
               watched.map((r) => r.productDescription.slice(0, 80)).join("\n"),
@@ -171,6 +176,10 @@ export default function App() {
         data.forEach((r) => {
           seenIdsRef.current.add(r.id);
         });
+        if (seenIdsRef.current.size > 1000) {
+          const entries = [...seenIdsRef.current];
+          seenIdsRef.current = new Set(entries.slice(entries.length - 1000));
+        }
         firstLoadRef.current = false;
       })
       .catch(() => {
@@ -178,7 +187,7 @@ export default function App() {
         setLoading(false);
       });
     return () => controller.abort();
-  }, [tab, debounced, page, classification, status, state, dietary, reloadKey, watchlist, notificationsEnabled]);
+  }, [tab, debounced, page, classification, status, state, dietary, reloadKey]);
 
   // Adverse events fetch
   useEffect(() => {
@@ -208,8 +217,10 @@ export default function App() {
         setEventLoading(false);
         const newEvents = data.filter((e) => !eventSeenIdsRef.current.has(e.id));
         if (newEvents.length > 0 && !eventFirstLoadRef.current && !stale && !demo && !err) {
-          const watched = newEvents.filter((e) => matchesWatchlist(eventSearchText(e), watchlist).length > 0);
-          if (watched.length > 0 && notificationsEnabled) {
+          const watched = newEvents.filter(
+            (e) => matchesWatchlist(eventSearchText(e), watchlistRef.current).length > 0,
+          );
+          if (watched.length > 0 && notificationsEnabledRef.current) {
             sendNotification(
               `${watched.length} newly observed adverse event report${watched.length > 1 ? "s" : ""} matching watchlist`,
               watched.map((e) => (e.products[0]?.nameBrand || e.reportNumber).slice(0, 80)).join("\n"),
@@ -219,6 +230,10 @@ export default function App() {
         data.forEach((e) => {
           eventSeenIdsRef.current.add(e.id);
         });
+        if (eventSeenIdsRef.current.size > 1000) {
+          const entries = [...eventSeenIdsRef.current];
+          eventSeenIdsRef.current = new Set(entries.slice(entries.length - 1000));
+        }
         eventFirstLoadRef.current = false;
       })
       .catch(() => {
@@ -226,7 +241,7 @@ export default function App() {
         setEventLoading(false);
       });
     return () => controller.abort();
-  }, [tab, debounced, eventPage, eventReloadKey, watchlist, notificationsEnabled]);
+  }, [tab, debounced, eventPage, eventReloadKey]);
 
   const showDemo = tab === "recalls" ? isDemo : eventIsDemo;
   const showStale = tab === "recalls" ? isStale : eventIsStale;
