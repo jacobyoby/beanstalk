@@ -113,10 +113,9 @@ export default function App() {
   const [eventReloadKey, setEventReloadKey] = useState(0);
   const triggerEventReload = () => setEventReloadKey((k) => k + 1);
 
-  const rawTotalPages = Math.ceil(total / PAGE_SIZE);
-  const totalPages = Math.max(1, Math.min(rawTotalPages, MAX_PAGE + 1));
-  const reachableTotal = Math.min(total, (MAX_PAGE + 1) * PAGE_SIZE);
-  const hasTruncatedWindow = total > reachableTotal;
+  // Recalls: skip through 25k, then openFDA search_after — do not truncate browse.
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const usesSearchAfterWindow = total > FDA_MAX_SKIP;
 
   const eventRawTotalPages = Math.ceil(eventTotal / PAGE_SIZE);
   const eventTotalPages = Math.max(1, Math.min(eventRawTotalPages, MAX_PAGE + 1));
@@ -167,7 +166,7 @@ export default function App() {
     fetchRecalls({
       search: debounced,
       limit: PAGE_SIZE,
-      skip: Math.min(page * PAGE_SIZE, FDA_MAX_SKIP),
+      skip: page * PAGE_SIZE,
       classification,
       status,
       state,
@@ -494,9 +493,7 @@ export default function App() {
                 <p className="text-sm text-zinc-700 dark:text-zinc-300" role="status" aria-live="polite">
                   {loading
                     ? "Loading recalls…"
-                    : hasTruncatedWindow
-                      ? `${reachableTotal.toLocaleString()} of ${total.toLocaleString()} recalls reachable`
-                      : `${total.toLocaleString()} ${total === 1 ? "recall" : "recalls"}`}
+                    : `${total.toLocaleString()} ${total === 1 ? "recall" : "recalls"}`}
                   {!loading && isStale && " · stale"}
                 </p>
                 {!loading && recalls.length > 0 && (
@@ -571,11 +568,11 @@ export default function App() {
                     onPrevious={() => setPage((p) => Math.max(0, p - 1))}
                     onNext={() => setPage((p) => p + 1)}
                   />
-                  {hasTruncatedWindow && (
+                  {usesSearchAfterWindow && (
                     <p className="hint mt-3 text-center">
-                      Showing the first {reachableTotal.toLocaleString()} of {total.toLocaleString()}. FDA&apos;s offset
-                      limit of {FDA_MAX_SKIP.toLocaleString()} stops paging after page {MAX_PAGE + 1}; narrow the
-                      filters to see more.
+                      {total.toLocaleString()} records as published by openFDA. Pages past skip{" "}
+                      {FDA_MAX_SKIP.toLocaleString()} use <code className="text-[11px]">search_after</code> cursor
+                      paging — status is not a live recall lifecycle.
                     </p>
                   )}
                   <p className="hint mt-2 text-center">
@@ -716,9 +713,11 @@ export default function App() {
                 displayed per FDA record.
               </p>
               <p>
-                Search notes: no matches return openFDA 404 (shown as empty). Paging stops at skip 25,000;{" "}
-                <code className="text-[11px]">search_after</code> is not used. Related events match any product token
-                (parenthesized OR). Watchlist terms also match adverse event product brands, reactions, and outcomes.
+                Search notes: no matches return openFDA 404 (shown as empty). Recall paging uses{" "}
+                <code className="text-[11px]">skip</code> through 25,000, then openFDA{" "}
+                <code className="text-[11px]">search_after</code> (Link cursor). Status is as published by openFDA, not a
+                live lifecycle. Related events match any product token (parenthesized OR). Watchlist terms also match
+                adverse event product brands, reactions, and outcomes.
               </p>
               <p>
                 Meat, poultry, and egg products are regulated by{" "}

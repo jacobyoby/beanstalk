@@ -10,7 +10,7 @@ Vite + React 19 + TypeScript + Tailwind CSS v4 + PWA (Workbox)
 - **Early Signals (CAERS)**: [openFDA Food Adverse Event API](https://api.fda.gov/food/event.json) — same proxy/auth/rate limits as enforcement
 - **Publish lag**: Dataset typically refreshes mid-week (Wednesday). Status fields are as published, not a current lifecycle.
 - **Empty search**: openFDA returns HTTP 404 + “No matches found” — the app shows an empty list, not an error.
-- **Pagination**: `skip` is capped at 25,000. `search_after` is not implemented; narrow filters to page further.
+- **Pagination**: `skip` through 25,000; beyond that, `search_after` via the openFDA `Link` header. Status is **as published by openFDA**, not a live lifecycle.
 - **Related Events**: parenthesized OR of product tokens ([#102](https://github.com/jacobyoby/beanstalk/pull/102)).
 - **API Key**: Optional via `VITE_OPENFDA_KEY` env var (increases rate limit from 40 to 240 req/min)
 - **Cache**: 6-hour localStorage cache with LRU eviction for offline/stale serving

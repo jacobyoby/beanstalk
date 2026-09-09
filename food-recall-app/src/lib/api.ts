@@ -189,13 +189,22 @@ export function buildCacheKey(
   ]);
 }
 
+/** openFDA rejects skip above this; deeper pages use Link / search_after. */
+export const OPENFDA_SKIP_CAP = 25000;
+/** Uncached jumps past the skip window walk this many cursor hops, then stop with a clear error. */
+const MAX_SEARCH_AFTER_HOPS = 32;
+
+type CachedPage = { recalls: Recall[]; total: number; nextUrl?: string | null };
+
 interface CacheEntry {
   key: string;
-  data: { recalls: Recall[]; total: number };
+  data: CachedPage;
   timestamp: number;
 }
 
-function getCache(cacheKey: string): { recalls: Recall[]; total: number } | null {
+const nextUrlByCacheKey = new Map<string, string>();
+
+function getCache(cacheKey: string): CachedPage | null {
   const entry = getCacheEntry(cacheKey);
   return entry ? entry.data : null;
 }
@@ -214,7 +223,7 @@ function getCacheEntry(cacheKey: string): CacheEntry | null {
   }
 }
 
-function setCache(cacheKey: string, data: { recalls: Recall[]; total: number }): void {
+function setCache(cacheKey: string, data: CachedPage): void {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     const entries: CacheEntry[] = raw ? JSON.parse(raw) : [];
@@ -234,6 +243,7 @@ export function getLastSynced(): string | null {
 }
 
 export function clearCache(): void {
+  nextUrlByCacheKey.clear();
   try {
     localStorage.removeItem(CACHE_KEY);
     localStorage.removeItem(SYNC_KEY);
@@ -264,6 +274,8 @@ export type FetchResult = {
   isStale: boolean;
   lastSynced: string | null;
   isDemo: boolean;
+  /** openFDA Link rel=next URL (includes search_after) when present. */
+  nextCursor?: string | null;
 };
 
 const FETCH_TIMEOUT_MS = 8000;
@@ -307,6 +319,250 @@ function parseErrorCode(status: number, body: unknown): FetchError {
   };
 }
 
+/**
+ * Extract rel="next" from an openFDA Link header.
+ * @see https://open.fda.gov/apis/paging/
+ */
+export function parseOpenFdaLinkNext(linkHeader: string | null | undefined): string | null {
+  if (!linkHeader) return null;
+  for (const part of linkHeader.split(",")) {
+    const trimmed = part.trim();
+    const urlMatch = trimmed.match(/^<([^>]+)>/);
+    if (!urlMatch) continue;
+    const relMatch = trimmed.match(/\brel\s*=\s*"?([^";,\s]+)"?/i);
+    if (relMatch && relMatch[1].toLowerCase() === "next") {
+      return urlMatch[1];
+    }
+  }
+  return null;
+}
+
+function linkNextFromResponse(res: Response): string | null {
+  const raw = res.headers?.get?.("link") ?? null;
+  return parseOpenFdaLinkNext(raw);
+}
+
+function rememberNextUrl(cacheKey: string, res: Response): string | null {
+  const next = linkNextFromResponse(res);
+  if (next) nextUrlByCacheKey.set(cacheKey, next);
+  else nextUrlByCacheKey.delete(cacheKey);
+  return next;
+}
+
+function peekNextUrl(cacheKey: string): string | null {
+  const memory = nextUrlByCacheKey.get(cacheKey);
+  if (memory) return memory;
+  const fromCache = getCache(cacheKey)?.nextUrl;
+  if (fromCache) {
+    nextUrlByCacheKey.set(cacheKey, fromCache);
+    return fromCache;
+  }
+  return null;
+}
+
+function enforcementEndpoints(): { proxyBase: string; directBase: string; isBrowser: boolean } {
+  const isBrowser = typeof window !== "undefined" && window.location.origin !== "null";
+  const proxyBase = isBrowser
+    ? `${window.location.origin}/api/food/enforcement.json`
+    : "https://api.fda.gov/food/enforcement.json";
+  const directBase = "https://api.fda.gov/food/enforcement.json";
+  return { proxyBase, directBase, isBrowser };
+}
+
+function buildSkipQuery(limit: number, skip: number, searchParam: string | null): string {
+  let q = `?limit=${limit}&skip=${skip}&sort=report_date:desc`;
+  if (searchParam) q += `&search=${encodeURIComponent(searchParam)}`;
+  return q;
+}
+
+function rewriteFdaUrlToProxy(fdaUrl: string, proxyBase: string, directBase: string): string {
+  if (fdaUrl.startsWith(directBase)) {
+    return proxyBase + fdaUrl.slice(directBase.length);
+  }
+  try {
+    const parsed = new URL(fdaUrl);
+    if (parsed.hostname === "api.fda.gov" && parsed.pathname.includes("/food/enforcement.json")) {
+      return `${proxyBase}${parsed.search}`;
+    }
+  } catch {
+    /* keep original */
+  }
+  return fdaUrl;
+}
+
+function cursorRequestUrls(cursorUrl: string): { preferredUrl: string; fallbackUrl: string | null } {
+  const { proxyBase, directBase, isBrowser } = enforcementEndpoints();
+  const preferredUrl = isBrowser ? rewriteFdaUrlToProxy(cursorUrl, proxyBase, directBase) : cursorUrl;
+  const fallbackUrl = preferredUrl !== cursorUrl ? cursorUrl : null;
+  return { preferredUrl, fallbackUrl };
+}
+
+function skipRequestUrls(
+  limit: number,
+  skip: number,
+  searchParam: string | null,
+): { preferredUrl: string; fallbackUrl: string | null } {
+  const { proxyBase, directBase, isBrowser } = enforcementEndpoints();
+  const query = buildSkipQuery(limit, skip, searchParam);
+  const preferredUrl = `${proxyBase}${query}`;
+  const fallbackUrl = isBrowser && proxyBase !== directBase ? `${directBase}${query}` : null;
+  return { preferredUrl, fallbackUrl };
+}
+
+async function fetchEnforcementResponse(
+  preferredUrl: string,
+  fallbackUrl: string | null,
+  signal?: AbortSignal,
+): Promise<Response> {
+  const fallback = fallbackUrl && fallbackUrl !== preferredUrl ? fallbackUrl : null;
+  let res: Response;
+  try {
+    res = await fetchWithTimeout(preferredUrl, FETCH_TIMEOUT_MS, signal);
+    const contentType = res.headers?.get?.("content-type") ?? null;
+    const isSpaCatchAll = res.ok && contentType !== null && !contentType.includes("application/json");
+    if (fallback && ((!res.ok && res.status === 404) || isSpaCatchAll)) {
+      res = await fetchWithTimeout(fallback, FETCH_TIMEOUT_MS, signal);
+    }
+  } catch (e) {
+    if (fallback && !(e instanceof DOMException && e.name === "AbortError")) {
+      res = await fetchWithTimeout(fallback, FETCH_TIMEOUT_MS, signal);
+    } else {
+      throw e;
+    }
+  }
+  return res;
+}
+
+function staleOrEmpty(cached: CachedPage | null, cachedEntry: CacheEntry | null, err: FetchError): FetchResult {
+  if (cached && cachedEntry) {
+    return {
+      recalls: cached.recalls,
+      total: cached.total,
+      error: err,
+      isStale: true,
+      lastSynced: new Date(cachedEntry.timestamp).toISOString(),
+      isDemo: false,
+      nextCursor: cached.nextUrl ?? peekNextUrl(cachedEntry.key),
+    };
+  }
+  return {
+    recalls: [],
+    total: 0,
+    error: err,
+    isStale: false,
+    lastSynced: getLastSynced(),
+    isDemo: false,
+    nextCursor: null,
+  };
+}
+
+async function interpretEnforcementResponse(
+  res: Response,
+  cacheKey: string,
+  cachedEntry: CacheEntry | null,
+): Promise<FetchResult> {
+  const cached = cachedEntry?.data ?? null;
+  const nextCursor = rememberNextUrl(cacheKey, res);
+  if (!res.ok) {
+    let body: unknown = null;
+    try {
+      body = await res.json();
+    } catch {
+      body = null;
+    }
+    const err = parseErrorCode(res.status, body);
+    if (err.code === "NOT_FOUND") {
+      setCache(cacheKey, { recalls: [], total: 0, nextUrl: nextCursor });
+      return {
+        recalls: [],
+        total: 0,
+        error: null,
+        isStale: false,
+        lastSynced: getLastSynced(),
+        isDemo: false,
+        nextCursor,
+      };
+    }
+    return staleOrEmpty(cached, cachedEntry, err);
+  }
+  let raw: unknown;
+  try {
+    raw = await res.json();
+  } catch {
+    const err: FetchError = { code: "MALFORMED", message: "Invalid JSON in FDA response", retryable: true };
+    return staleOrEmpty(cached, cachedEntry, err);
+  }
+  if (!raw || typeof raw !== "object" || !Array.isArray((raw as { results?: unknown }).results)) {
+    const err: FetchError = {
+      code: "MALFORMED",
+      message: "Malformed FDA response: missing results array",
+      retryable: true,
+    };
+    return staleOrEmpty(cached, cachedEntry, err);
+  }
+  const data = raw as {
+    results: unknown[];
+    meta?: { results?: { total?: unknown; skip?: unknown; limit?: unknown } };
+  };
+  if (data.meta?.results) {
+    const m = data.meta.results;
+    if (
+      (m.total !== undefined && typeof m.total !== "number") ||
+      (m.skip !== undefined && typeof m.skip !== "number") ||
+      (m.limit !== undefined && typeof m.limit !== "number")
+    ) {
+      const err: FetchError = {
+        code: "MALFORMED",
+        message: "Malformed FDA response: invalid pagination meta",
+        retryable: true,
+      };
+      return staleOrEmpty(cached, cachedEntry, err);
+    }
+  }
+  const mapped = (data.results as OpenFDARecord[]).map(mapOpenFDA).filter((r): r is Recall => r !== null);
+  const seen = new Set<string>();
+  const recalls: Recall[] = [];
+  for (const r of mapped) {
+    if (!seen.has(r.id)) {
+      seen.add(r.id);
+      recalls.push(r);
+    }
+  }
+  const total = typeof data.meta?.results?.total === "number" ? data.meta.results.total : recalls.length;
+  setCache(cacheKey, { recalls, total, nextUrl: nextCursor });
+  return { recalls, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: false, nextCursor };
+}
+
+async function loadEnforcementPage(
+  preferredUrl: string,
+  fallbackUrl: string | null,
+  cacheKey: string,
+  signal?: AbortSignal,
+): Promise<FetchResult> {
+  const cachedEntry = getCacheEntry(cacheKey);
+  const res = await fetchEnforcementResponse(preferredUrl, fallbackUrl, signal);
+  return interpretEnforcementResponse(res, cacheKey, cachedEntry);
+}
+
+function cursorMissingResult(total: number, message: string, asError: boolean): FetchResult {
+  return {
+    recalls: [],
+    total,
+    error: asError
+      ? {
+          code: "BAD_REQUEST",
+          message,
+          status: 400,
+          retryable: false,
+        }
+      : null,
+    isStale: false,
+    lastSynced: getLastSynced(),
+    isDemo: false,
+    nextCursor: null,
+  };
+}
+
 export async function fetchRecalls(params?: {
   search?: string;
   limit?: number;
@@ -345,28 +601,12 @@ export async function fetchRecalls(params?: {
     if (dp) predicates.push(dp);
   }
   const searchParam = buildSearchParam(search, predicates);
-  // openFDA rejects skip > 25,000; we do not implement search_after. Cap and refuse the request.
-  const cappedSkip = Math.min(skip, 25000);
-  if (cappedSkip !== skip) {
-    // Offset beyond FDA limit — return empty with truncated window info, do not request
-    return {
-      recalls: [],
-      total: 0,
-      error: {
-        code: "BAD_REQUEST",
-        message: "Skip exceeds FDA limit 25,000 — narrow filters",
-        status: 400,
-        retryable: false,
-      },
-      isStale: false,
-      lastSynced: getLastSynced(),
-      isDemo: false,
-    };
-  }
-  const cacheKey = buildCacheKey(search, classification, status, state, dietary, limit, cappedSkip, hazard);
+  const cacheKey = buildCacheKey(search, classification, status, state, dietary, limit, skip, hazard);
   const cachedEntry = getCacheEntry(cacheKey);
   const cached = cachedEntry?.data ?? null;
   const demo = isDemoMode();
+  const keyForSkip = (pageSkip: number) =>
+    buildCacheKey(search, classification, status, state, dietary, limit, pageSkip, hazard);
 
   // Demo mode: explicit, conspicuously fictional data — filter before slicing
   if (demo) {
@@ -387,7 +627,7 @@ export async function fetchRecalls(params?: {
     if (dietary.length > 0) filtered = filtered.filter((r) => matchesDietaryConcerns(r, dietary as DietaryConcern[]));
     if (hazard) filtered = filtered.filter((r) => categorizeReason(r.reasonForRecall) === hazard);
     const total = filtered.length;
-    const paged = filtered.slice(cappedSkip, cappedSkip + limit);
+    const paged = filtered.slice(skip, skip + limit);
     return { recalls: paged, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: true };
   }
 
@@ -396,143 +636,90 @@ export async function fetchRecalls(params?: {
       const err: FetchError = { code: "NETWORK", message: "Aborted", retryable: false };
       return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false };
     }
-    const isBrowser = typeof window !== "undefined" && window.location.origin !== "null";
-    const proxyBase = isBrowser
-      ? `${window.location.origin}/api/food/enforcement.json`
-      : "https://api.fda.gov/food/enforcement.json";
-    const directBase = "https://api.fda.gov/food/enforcement.json";
-    let url = `${proxyBase}?limit=${limit}&skip=${cappedSkip}&sort=report_date:desc`;
-    if (searchParam) {
-      url += `&search=${encodeURIComponent(searchParam)}`;
-    }
-    // No api_key in client bundle; server proxy injects OPENFDA_API_KEY when available
 
-    let res: Response;
-    try {
-      res = await fetchWithTimeout(url, FETCH_TIMEOUT_MS, params?.signal);
-      // SPA static hosts return 200 with text/html for unknown API routes.
-      // Detect non-JSON content-type and fall back to direct FDA URL.
-      // Only flag SPA catch-all when headers are present and explicitly non-JSON.
-      // If headers are absent (e.g. test mocks), assume the response is valid JSON.
-      const contentType = res.headers?.get?.("content-type") ?? null;
-      const isSpaCatchAll = res.ok && contentType !== null && !contentType.includes("application/json");
-      if (((!res.ok && res.status === 404) || isSpaCatchAll) && proxyBase !== directBase && isBrowser) {
-        const directUrl = `${directBase}?limit=${limit}&skip=${cappedSkip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ""}`;
-        res = await fetchWithTimeout(directUrl, FETCH_TIMEOUT_MS, params?.signal);
+    let preferredUrl: string;
+    let fallbackUrl: string | null;
+    // Under-cap: skip/limit as before. Over-cap: openFDA Link / search_after (skip cannot exceed 25,000).
+    if (skip <= OPENFDA_SKIP_CAP) {
+      const urls = skipRequestUrls(limit, skip, searchParam);
+      preferredUrl = urls.preferredUrl;
+      fallbackUrl = urls.fallbackUrl;
+    } else {
+      let cursorUrl: string | null = null;
+      let cursorPageSkip = skip;
+      for (let prev = skip - limit; prev >= 0; prev -= limit) {
+        const stored = peekNextUrl(keyForSkip(prev));
+        if (stored) {
+          cursorUrl = stored;
+          cursorPageSkip = prev + limit;
+          break;
+        }
+        if (prev <= OPENFDA_SKIP_CAP) break;
       }
-    } catch (e) {
-      if (
-        isBrowser &&
-        proxyBase !== directBase &&
-        !(e instanceof DOMException && (e as DOMException).name === "AbortError")
-      ) {
-        const directUrl = `${directBase}?limit=${limit}&skip=${cappedSkip}&sort=report_date:desc${searchParam ? `&search=${encodeURIComponent(searchParam)}` : ""}`;
-        res = await fetchWithTimeout(directUrl, FETCH_TIMEOUT_MS, params?.signal);
-      } else {
-        throw e;
+      if (!cursorUrl) {
+        let seedSkip = skip;
+        while (seedSkip > OPENFDA_SKIP_CAP) seedSkip -= limit;
+        if (seedSkip < 0) seedSkip = 0;
+        const seedUrls = skipRequestUrls(limit, seedSkip, searchParam);
+        const seed = await loadEnforcementPage(
+          seedUrls.preferredUrl,
+          seedUrls.fallbackUrl,
+          keyForSkip(seedSkip),
+          params?.signal,
+        );
+        if (seed.error && !seed.isStale) return seed;
+        cursorUrl = seed.nextCursor ?? peekNextUrl(keyForSkip(seedSkip));
+        cursorPageSkip = seedSkip + limit;
+        if (!cursorUrl) {
+          const knownTotal = seed.total;
+          const moreRemain = knownTotal > seedSkip + limit;
+          return cursorMissingResult(
+            knownTotal,
+            "openFDA did not return a search_after cursor to page past skip 25,000",
+            moreRemain,
+          );
+        }
       }
+      let hops = 0;
+      while (cursorUrl && cursorPageSkip < skip) {
+        hops += 1;
+        if (hops > MAX_SEARCH_AFTER_HOPS) {
+          return cursorMissingResult(
+            0,
+            "Too far past openFDA skip 25,000 without a search_after cursor — page forward from the skip window",
+            true,
+          );
+        }
+        const walkUrls = cursorRequestUrls(cursorUrl);
+        const walk = await loadEnforcementPage(
+          walkUrls.preferredUrl,
+          walkUrls.fallbackUrl,
+          keyForSkip(cursorPageSkip),
+          params?.signal,
+        );
+        if (walk.error && !walk.isStale) return walk;
+        const next = walk.nextCursor ?? peekNextUrl(keyForSkip(cursorPageSkip));
+        if (!next) {
+          const moreRemain = walk.total > cursorPageSkip + limit;
+          return cursorMissingResult(
+            walk.total,
+            "openFDA search_after cursor ended before the requested page",
+            moreRemain,
+          );
+        }
+        cursorUrl = next;
+        cursorPageSkip += limit;
+      }
+      if (!cursorUrl) {
+        return cursorMissingResult(0, "openFDA did not return a search_after cursor to page past skip 25,000", true);
+      }
+      const cursorUrls = cursorRequestUrls(cursorUrl);
+      preferredUrl = cursorUrls.preferredUrl;
+      fallbackUrl = cursorUrls.fallbackUrl;
     }
-    if (!res.ok) {
-      let body: unknown = null;
-      try {
-        body = await res.json();
-      } catch {
-        body = null;
-      }
-      const err = parseErrorCode(res.status, body);
-      if (err.code === "NOT_FOUND") {
-        // Genuine empty — not an error, cache empty result
-        setCache(cacheKey, { recalls: [], total: 0 });
-        return { recalls: [], total: 0, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: false };
-      }
-      // For retryable errors, return stale cache if available with label
-      if (cached && cachedEntry) {
-        return {
-          recalls: cached.recalls,
-          total: cached.total,
-          error: err,
-          isStale: true,
-          lastSynced: new Date(cachedEntry.timestamp).toISOString(),
-          isDemo: false,
-        };
-      }
-      return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false };
-    }
-    let raw: unknown;
-    try {
-      raw = await res.json();
-    } catch {
-      const err: FetchError = { code: "MALFORMED", message: "Invalid JSON in FDA response", retryable: true };
-      if (cached && cachedEntry)
-        return {
-          recalls: cached.recalls,
-          total: cached.total,
-          error: err,
-          isStale: true,
-          lastSynced: new Date(cachedEntry.timestamp).toISOString(),
-          isDemo: false,
-        };
-      return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false };
-    }
-    if (!raw || typeof raw !== "object" || !Array.isArray((raw as any).results)) {
-      const err: FetchError = {
-        code: "MALFORMED",
-        message: "Malformed FDA response: missing results array",
-        retryable: true,
-      };
-      if (cached && cachedEntry)
-        return {
-          recalls: cached.recalls,
-          total: cached.total,
-          error: err,
-          isStale: true,
-          lastSynced: new Date(cachedEntry.timestamp).toISOString(),
-          isDemo: false,
-        };
-      return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false };
-    }
-    const data = raw as {
-      results: unknown[];
-      meta?: { results?: { total?: unknown; skip?: unknown; limit?: unknown } };
-    };
-    // Validate pagination meta types when present
-    if (data.meta?.results) {
-      const m = data.meta.results;
-      if (
-        (m.total !== undefined && typeof m.total !== "number") ||
-        (m.skip !== undefined && typeof m.skip !== "number") ||
-        (m.limit !== undefined && typeof m.limit !== "number")
-      ) {
-        const err: FetchError = {
-          code: "MALFORMED",
-          message: "Malformed FDA response: invalid pagination meta",
-          retryable: true,
-        };
-        if (cached && cachedEntry)
-          return {
-            recalls: cached.recalls,
-            total: cached.total,
-            error: err,
-            isStale: true,
-            lastSynced: new Date(cachedEntry.timestamp).toISOString(),
-            isDemo: false,
-          };
-        return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false };
-      }
-    }
-    const mapped = (data.results as OpenFDARecord[]).map(mapOpenFDA).filter((r): r is Recall => r !== null);
-    // Deduplicate by id, keep first
-    const seen = new Set<string>();
-    const recalls: Recall[] = [];
-    for (const r of mapped) {
-      if (!seen.has(r.id)) {
-        seen.add(r.id);
-        recalls.push(r);
-      }
-    }
-    const total = typeof data.meta?.results?.total === "number" ? data.meta.results.total : recalls.length;
-    setCache(cacheKey, { recalls, total });
-    return { recalls, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: false };
+
+    // No api_key in client bundle; server proxy injects OPENFDA_API_KEY when available
+    return await loadEnforcementPage(preferredUrl, fallbackUrl, cacheKey, params?.signal);
   } catch (e: unknown) {
     const isAbort = e instanceof DOMException && e.name === "AbortError";
     const err: FetchError = isAbort
@@ -546,6 +733,7 @@ export async function fetchRecalls(params?: {
         isStale: true,
         lastSynced: new Date(cachedEntry.timestamp).toISOString(),
         isDemo: false,
+        nextCursor: cached.nextUrl ?? null,
       };
     }
     return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false };

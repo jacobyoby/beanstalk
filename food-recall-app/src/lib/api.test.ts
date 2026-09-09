@@ -5,6 +5,8 @@ import {
   buildSearchParam,
   clearCache,
   fetchRecalls,
+  OPENFDA_SKIP_CAP,
+  parseOpenFdaLinkNext,
   sanitizeSearchQuery,
 } from "./api";
 
@@ -573,5 +575,146 @@ describe("SPA static host fallback (#90)", () => {
     expect(res.recalls.length).toBe(1);
     expect(res.recalls[0].productDescription).toBe("Direct");
     expect(res.isDemo).toBe(false);
+  });
+});
+
+describe("parseOpenFdaLinkNext", () => {
+  it("reads rel=next URL from a Link header", () => {
+    const next = "https://api.fda.gov/food/enforcement.json?limit=6&skip=0&sort=report_date:desc&search_after=token123";
+    expect(parseOpenFdaLinkNext(`<${next}>; rel="next"`)).toBe(next);
+  });
+
+  it("returns null when the header is missing or has no next relation", () => {
+    expect(parseOpenFdaLinkNext(null)).toBeNull();
+    expect(parseOpenFdaLinkNext('<https://api.fda.gov/food/enforcement.json>; rel="prev"')).toBeNull();
+  });
+});
+
+describe("fetchRecalls — skip cap and search_after", () => {
+  const seedRecord = {
+    recall_number: "F-SEED",
+    product_description: "Under cap",
+    reason_for_recall: "X",
+    classification: "Class I",
+    status: "Ongoing",
+    recalling_firm: "Firm",
+    distribution_pattern: "CA",
+  };
+  const afterRecord = {
+    recall_number: "F-AFTER",
+    product_description: "Past cap",
+    reason_for_recall: "Y",
+    classification: "Class I",
+    status: "Ongoing",
+    recalling_firm: "Firm",
+    distribution_pattern: "CA",
+  };
+  const nextUrl =
+    "https://api.fda.gov/food/enforcement.json?limit=6&skip=0&sort=report_date%3Adesc&search_after=0%3Dcursor";
+
+  beforeEach(() => {
+    clearCache();
+    localStorage.clear();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("under-cap skip still uses skip and does not send search_after", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({
+        "content-type": "application/json",
+        link: `<${nextUrl}>; rel="next"`,
+      }),
+      json: async () => ({
+        results: [seedRecord],
+        meta: { results: { total: 100, skip: 12, limit: 6 } },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await fetchRecalls({ search: "", limit: 6, skip: 12 });
+    expect(res.error).toBeNull();
+    expect(res.recalls[0].recallNumber).toBe("F-SEED");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("skip=12");
+    expect(url).not.toContain("search_after");
+    expect(res.nextCursor).toContain("search_after");
+  });
+
+  it("skip at the 25,000 cap still uses skip, not search_after", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ "content-type": "application/json" }),
+      json: async () => ({
+        results: [seedRecord],
+        meta: { results: { total: OPENFDA_SKIP_CAP + 6 } },
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await fetchRecalls({ search: "", limit: 6, skip: OPENFDA_SKIP_CAP });
+    expect(res.error).toBeNull();
+    expect(String(fetchMock.mock.calls[0][0])).toContain(`skip=${OPENFDA_SKIP_CAP}`);
+    expect(String(fetchMock.mock.calls[0][0])).not.toContain("search_after");
+  });
+
+  it("over-cap skip follows Link search_after instead of BAD_REQUEST", async () => {
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      const href = String(url);
+      if (href.includes("search_after=")) {
+        return Promise.resolve({
+          ok: true,
+          headers: new Headers({ "content-type": "application/json" }),
+          json: async () => ({
+            results: [afterRecord],
+            meta: { results: { total: 30000 } },
+          }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        headers: new Headers({
+          "content-type": "application/json",
+          link: `<${nextUrl}>; rel="next"`,
+        }),
+        json: async () => ({
+          results: [seedRecord],
+          meta: { results: { total: 30000 } },
+        }),
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await fetchRecalls({ search: "", limit: 6, skip: OPENFDA_SKIP_CAP + 6 });
+    expect(res.error).toBeNull();
+    expect(res.recalls[0].recallNumber).toBe("F-AFTER");
+    expect(res.recalls[0].productDescription).toBe("Past cap");
+    expect(res.total).toBe(30000);
+    const urls = fetchMock.mock.calls.map((c) => String(c[0]));
+    expect(urls.some((u) => u.includes("search_after="))).toBe(true);
+    expect(urls.some((u) => u.includes(`skip=${OPENFDA_SKIP_CAP}`))).toBe(true);
+  });
+
+  it("over-cap without a next Link returns a clear error, not a silent empty", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ "content-type": "application/json" }),
+        json: async () => ({
+          results: [seedRecord],
+          meta: { results: { total: 40000 } },
+        }),
+      }),
+    );
+
+    const res = await fetchRecalls({ search: "", limit: 6, skip: OPENFDA_SKIP_CAP + 6 });
+    expect(res.recalls).toEqual([]);
+    expect(res.error).not.toBeNull();
+    expect(res.error?.code).toBe("BAD_REQUEST");
+    expect(res.error?.message).toMatch(/search_after/i);
+    expect(res.total).toBe(40000);
   });
 });

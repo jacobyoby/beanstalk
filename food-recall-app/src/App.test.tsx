@@ -358,12 +358,18 @@ describe("App search and pagination", () => {
     await waitFor(() => expect(screen.getByText(/Failed to load recalls/)).toBeInTheDocument());
   });
 
-  it("shows truncated window message when total exceeds FDA max offset", async () => {
+  it("does not imply browse stops at the skip cap when search_after is available", async () => {
     const mockData = Array.from({ length: 6 }, (_, i) => makeRecall({ id: `F-${i}`, recallNumber: `F-${i}` }));
     fetchRecallsMock.mockResolvedValue(makeFetchResult({ recalls: mockData, total: 50000 }));
 
     render(<App />);
-    await waitFor(() => expect(screen.getByText(/FDA's offset limit/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/Page 1 of 8334/)).toBeInTheDocument());
+    expect(screen.getByText(/50,000 recalls/)).toBeInTheDocument();
+    expect(screen.getAllByText(/search_after/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/cursor paging/i)).toBeInTheDocument();
+    expect(screen.queryByText(/FDA's offset limit/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/stops paging/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/reachable/)).not.toBeInTheDocument();
   });
 
   it("abort controller racing: rapid fetches only use latest result", async () => {
@@ -395,16 +401,16 @@ describe("App search and pagination", () => {
     expect(screen.queryByText("First Result")).not.toBeInTheDocument();
   });
 
-  it("fetchRecalls is called with skip capped at 25000", async () => {
+  it("fetchRecalls receives page skip without clipping under the first page", async () => {
     const mockData = Array.from({ length: 6 }, (_, i) => makeRecall({ id: `F-${i}`, recallNumber: `F-${i}` }));
     fetchRecallsMock.mockResolvedValue(makeFetchResult({ recalls: mockData, total: 100000 }));
 
     render(<App />);
     await waitFor(() => expect(screen.getByText(/Page 1/)).toBeInTheDocument());
 
-    for (const call of fetchRecallsMock.mock.calls) {
-      expect(call[0]?.skip).toBeLessThanOrEqual(25000);
-    }
+    const firstCall = fetchRecallsMock.mock.calls[0]?.[0];
+    expect(firstCall?.skip).toBe(0);
+    expect(screen.getByText(/Page 1 of 16667/)).toBeInTheDocument();
   });
 });
 
