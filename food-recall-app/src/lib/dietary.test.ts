@@ -181,3 +181,50 @@ describe("DIETARY_LABELS", () => {
     }
   });
 });
+
+describe("dietary suffix negation", () => {
+  it('treats "milk-free" as negated for milk', () => {
+    expect(matchesDietaryConcerns(makeRecall("milk-free alternative", ""), ["milk"])).toBe(false);
+  });
+
+  it('treats "dairy free" as negated for milk', () => {
+    expect(matchesDietaryConcerns(makeRecall("dairy free product", ""), ["milk"])).toBe(false);
+  });
+
+  it('treats "peanut-free, tree nuts" — peanut negated, tree nuts present', () => {
+    const concerns: DietaryConcern[] = ["peanuts", "tree_nuts"];
+    const matches = getDietaryMatches(makeRecall("peanut-free product that also contains tree nuts", ""), concerns).map(
+      (m) => m.concern,
+    );
+    expect(matches).not.toContain("peanuts");
+    expect(matches).toContain("tree_nuts");
+  });
+
+  it('treats "gluten free" as negated for gluten', () => {
+    expect(matchesDietaryConcerns(makeRecall("gluten free bread", ""), ["gluten"])).toBe(false);
+  });
+});
+
+describe("dietary prefix negation (regression)", () => {
+  it('still negates "free of milk"', () => {
+    expect(matchesDietaryConcerns(makeRecall("free of milk", ""), ["milk"])).toBe(false);
+  });
+
+  it('still negates "without eggs"', () => {
+    expect(matchesDietaryConcerns(makeRecall("without eggs", ""), ["eggs"])).toBe(false);
+  });
+
+  it('still negates "no peanuts"', () => {
+    expect(matchesDietaryConcerns(makeRecall("no peanuts", ""), ["peanuts"])).toBe(false);
+  });
+});
+
+describe("dietary positive detection", () => {
+  it("detects milk when present without negation", () => {
+    expect(matchesDietaryConcerns(makeRecall("contains milk", ""), ["milk"])).toBe(true);
+  });
+
+  it("detects gluten when present without negation", () => {
+    expect(matchesDietaryConcerns(makeRecall("wheat and gluten", ""), ["gluten"])).toBe(true);
+  });
+});
