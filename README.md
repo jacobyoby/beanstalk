@@ -60,3 +60,6 @@ This development version has known result, provenance, and accessibility limitat
 ## Contribute
 
 Choose a scoped item from the [v0.1 roadmap](https://github.com/jacobyoby/beanstalk/issues/24). Include a reproducible case, expected behavior, and tests for the change. Data reports should identify the FDA record and the field that differs; omit private information and credentials.
+
+## Support
+[Donate / Support Jacobrakai Foundation — JACOBRAKAI FOUNDATION 501(c)(3)](https://donate.stripe.com/eVq4gy97DanS9h60phfrW00)
