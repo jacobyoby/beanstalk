@@ -13,6 +13,7 @@ Beanstalk is a calm, searchable interface for the FDA's food enforcement archive
 - Searches FDA food enforcement records by product, reason, and recalling firm.
 - Surfaces Early Signals from unverified CAERS adverse event reports.
 - Filters by FDA classification, status, distribution state, and dietary terms.
+- Sorts listed recalls by date (newest first by default).
 - Shows provenance, distribution, code information, and source links in a detail drawer.
 - Saves successful queries in the browser so a clearly labeled saved copy can remain available during a temporary FDA/API failure.
 - Supports a local watchlist with optional browser alerts while the app is open.

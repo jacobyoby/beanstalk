@@ -398,3 +398,70 @@ describe("App search and pagination", () => {
     }
   });
 });
+
+describe("App date sort", () => {
+  const unsortedRecalls = [
+    makeRecall({
+      id: "F-MID",
+      recallNumber: "F-MID",
+      productDescription: "Mid Product",
+      recallInitiationDate: "20230115",
+    }),
+    makeRecall({
+      id: "F-OLD",
+      recallNumber: "F-OLD",
+      productDescription: "Old Product",
+      recallInitiationDate: "20200101",
+    }),
+    makeRecall({
+      id: "F-NEW",
+      recallNumber: "F-NEW",
+      productDescription: "New Product",
+      recallInitiationDate: "20260320",
+    }),
+  ];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    mockGetPermissionStatus = () => "denied";
+    fetchRecallsMock.mockResolvedValue(makeFetchResult({ recalls: unsortedRecalls, total: 3 }));
+    stubMatchMedia();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const listedProductNames = () =>
+    screen.getAllByRole("button", { name: /view recall/i }).map((el) => el.getAttribute("aria-label"));
+
+  it("defaults to newest-first and shows the date sort control", async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getByText("New Product")).toBeInTheDocument());
+
+    const select = screen.getByLabelText("Sort by date") as HTMLSelectElement;
+    expect(select.value).toBe("newest");
+    expect(listedProductNames()).toEqual([
+      "View recall F-NEW: New Product",
+      "View recall F-MID: Mid Product",
+      "View recall F-OLD: Old Product",
+    ]);
+    expect(screen.getByText(/Sorted by date, newest first/)).toBeInTheDocument();
+  });
+
+  it("reorders listed recalls oldest-first when selected", async () => {
+    render(<App />);
+    await waitFor(() => expect(screen.getByLabelText("Sort by date")).toBeInTheDocument());
+
+    fireEvent.change(screen.getByLabelText("Sort by date"), { target: { value: "oldest" } });
+
+    expect((screen.getByLabelText("Sort by date") as HTMLSelectElement).value).toBe("oldest");
+    expect(listedProductNames()).toEqual([
+      "View recall F-OLD: Old Product",
+      "View recall F-MID: Mid Product",
+      "View recall F-NEW: New Product",
+    ]);
+    expect(screen.getByText(/Sorted by date, oldest first/)).toBeInTheDocument();
+  });
+});

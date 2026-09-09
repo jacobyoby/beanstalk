@@ -13,6 +13,7 @@ import type { DietaryConcern } from "./lib/dietary";
 import { eventSearchText, fetchAdverseEvents, getEventLastSynced } from "./lib/events";
 import { isNewRecall } from "./lib/formatDate";
 import { getPermissionStatus, requestNotificationPermission, sendNotification } from "./lib/notifications";
+import { type DateSortDirection, sortRecallsByDate } from "./lib/sortRecalls";
 import { matchesWatchlist } from "./lib/watchlist";
 import type { AdverseEvent } from "./types/event";
 import { FDA_EVENT_DISCLAIMER } from "./types/event";
@@ -37,6 +38,7 @@ export default function App() {
   const [dietary, setDietary] = useState<DietaryConcern[]>([]);
   const [selected, setSelected] = useState<Recall | null>(null);
   const [page, setPage] = useState(0);
+  const [dateSort, setDateSort] = useState<DateSortDirection>("newest");
   const [lastSynced, setLastSynced] = useState<string | null>(getLastSynced());
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return false;
@@ -504,8 +506,24 @@ export default function App() {
               )}
               {!loading && !(error && !isStale && recalls.length === 0) && (
                 <>
+                  {recalls.length > 0 && (
+                    <div className="flex items-center justify-end mb-3">
+                      <label htmlFor="date-sort" className="text-xs font-medium dark:text-zinc-300 mr-2">
+                        Sort by date
+                      </label>
+                      <select
+                        id="date-sort"
+                        value={dateSort}
+                        onChange={(e) => setDateSort(e.target.value === "oldest" ? "oldest" : "newest")}
+                        className="border-zinc-400 dark:border-zinc-500 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 min-h-[44px]"
+                      >
+                        <option value="newest">Newest first</option>
+                        <option value="oldest">Oldest first</option>
+                      </select>
+                    </div>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {recalls.map((r) => (
+                    {sortRecallsByDate(recalls, dateSort).map((r) => (
                       <RecallCard
                         key={r.id}
                         recall={r}
@@ -549,7 +567,8 @@ export default function App() {
                     </p>
                   )}
                   <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-2">
-                    Sorted by report_date, newest first. Dates shown are recall_initiation_date or report_date from FDA.
+                    Sorted by date, {dateSort === "newest" ? "newest" : "oldest"} first. Dates shown are
+                    recall_initiation_date or report_date from FDA.
                   </p>
                 </>
               )}
