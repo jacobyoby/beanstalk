@@ -120,7 +120,7 @@ export default function App() {
       setLoading(false)
       const newRecalls = data.filter(r => !seenIdsRef.current.has(r.id))
       if (newRecalls.length > 0 && !firstLoadRef.current && !stale && !demo && !err) {
-        const watched = newRecalls.filter(r => matchesWatchlist(`${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`, watchlist).length > 0)
+        const watched = newRecalls.filter(r => matchesWatchlist(`${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm} ${r.brand || ''} ${r.hazard || ''} ${r.headline || ''}`, watchlist).length > 0)
         if (watched.length > 0 && notificationsEnabled) {
           sendNotification(`${watched.length} newly observed recall${watched.length > 1 ? 's' : ''} matching watchlist`, watched.map(r => r.productDescription.slice(0, 80)).join('\n'))
         }
@@ -187,20 +187,20 @@ export default function App() {
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Beanstalk</h1>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               {tab === 'recalls'
-                ? <>FDA enforcement records • {showLastSynced ? `Retrieved ${new Date(showLastSynced).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} today` : 'Retrieved — awaiting sync'}</>
+                ? <>FDA + USDA FSIS recalls • {showLastSynced ? `Retrieved ${new Date(showLastSynced).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} today` : 'Retrieved — awaiting sync'}</>
                 : <>FDA adverse event reports (CAERS) • {showLastSynced ? `Retrieved ${new Date(showLastSynced).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} today` : 'Retrieved — awaiting sync'}</>
               }
             </p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
               {tab === 'recalls'
-                ? 'Source: openFDA Food Enforcement (2004-present). Status is FDA-reported, not verified real-time lifecycle.'
+                ? 'Sources: openFDA Food Enforcement + USDA FSIS meat/poultry/egg notices. Status is agency-reported, not verified real-time lifecycle.'
                 : 'Source: openFDA Food Adverse Event reports (CAERS). Unverified community/industry reports — not recalls.'}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-zinc-700 dark:text-zinc-300 max-w-sm">
               {tab === 'recalls'
-                ? <><strong>FDA scope:</strong> Enforcement archive; status may remain Ongoing after publication. Verify with FDA before action.</>
+                ? <><strong>FDA + USDA scope:</strong> FDA foods and USDA FSIS meat/poultry/egg. Status may remain Ongoing after publication. Verify with the issuing agency before action.</>
                 : <><strong>Early signals:</strong> {FDA_EVENT_DISCLAIMER}</>
               }
             </div>
@@ -241,7 +241,7 @@ export default function App() {
         </div>
         {showDemo && (
           <div className="bg-purple-600 text-white text-center text-sm py-2" role="status">
-            DEMO MODE — Fictional data, not real FDA {tab === 'recalls' ? 'recalls' : 'adverse event reports'}. Add ?demo=1 to URL.
+            DEMO MODE — Fictional data, not real {tab === 'recalls' ? 'FDA/USDA recalls' : 'FDA adverse event reports'}. Add ?demo=1 to URL.
           </div>
         )}
         {showStale && (
@@ -328,7 +328,7 @@ export default function App() {
                     <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]" aria-label="Next page">Next</button>
                   </div>
                   {hasTruncatedWindow && <p className="text-xs text-amber-700 text-center mt-2">Showing the first {reachableTotal.toLocaleString()} of {total.toLocaleString()}. FDA&apos;s offset limit of {FDA_MAX_SKIP.toLocaleString()} stops paging after page {maxPage + 1}; narrow the filters to see more.</p>}
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-2">Sorted by report_date, newest first. Dates shown are recall_initiation_date or report_date from FDA.</p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-2">Sorted by report_date, newest first. Dates shown are recall_initiation_date or report_date from FDA, or the FSIS notice date for USDA rows.</p>
                 </>
               )}
             </section>
@@ -391,9 +391,11 @@ export default function App() {
         Data:{' '}
         <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank" rel="noopener noreferrer">openFDA Food Enforcement</a>
         {' · '}
+        <a className="underline" href="https://www.fsis.usda.gov/recalls" target="_blank" rel="noopener noreferrer">USDA FSIS Recalls</a>
+        {' · '}
         <a className="underline" href="https://open.fda.gov/apis/food/event/" target="_blank" rel="noopener noreferrer">openFDA Food Adverse Events</a>
         {' · '}
-        Early Signals are unverified community reports, not recalls. Verify with FDA before action. • Not medical advice.
+        Early Signals are unverified community reports, not recalls. Verify with the issuing agency before action. • Not medical advice.
       </footer>
     </div>
   )

@@ -1,6 +1,11 @@
 import type { Recall, RecallClassification } from '../types/recall'
-import { mockRecalls } from './mockData'
+import { mockRecalls, mockFsisRecalls } from './mockData'
 import { buildDietaryPredicate, matchesDietaryConcerns, type DietaryConcern } from './dietary'
+import {
+  fetchFsisRecalls,
+  filterFsisRecalls,
+  mergeRecallFeeds,
+} from './fsis'
 
 interface OpenFDARecord {
   recall_number?: string
@@ -61,6 +66,7 @@ function mapOpenFDA(r: OpenFDARecord): Recall | null {
   const rawStatus = typeof r.status === 'string' ? r.status : undefined
   return {
     id: stableId(r),
+    source: 'FDA',
     recallNumber: typeof r.recall_number === 'string' ? r.recall_number : '',
     eventId: typeof r.event_id === 'string' ? r.event_id : '',
     productDescription: typeof r.product_description === 'string' ? r.product_description : '',
@@ -231,6 +237,10 @@ export type FetchResult = {
   isStale: boolean
   lastSynced: string | null
   isDemo: boolean
+  /** Count of USDA FSIS recalls included after client-side filters. */
+  fsisCount?: number
+  /** Soft USDA/FSIS error that did not block FDA results. */
+  fsisError?: { code: string; message: string; retryable: boolean } | null
 }
 
 const FETCH_TIMEOUT_MS = 8000
@@ -309,14 +319,15 @@ export async function fetchRecalls(params?: {
   // Demo mode: explicit, conspicuously fictional data — filter before slicing
   if (demo) {
     const q = sanitizeSearchQuery(search).toLowerCase()
-    let filtered = mockRecalls.map(r => ({
+    let filtered = [...mockRecalls, ...mockFsisRecalls].map(r => ({
       ...r,
       productDescription: `DEMO — Fictional — ${r.productDescription}`,
       recallNumber: `DEMO-${r.recallNumber}`,
+      headline: r.headline ? `DEMO — Fictional — ${r.headline}` : r.headline,
     }))
     if (q) {
       filtered = filtered.filter(r =>
-        `${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`.toLowerCase().includes(q)
+        `${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm} ${r.brand || ''} ${r.headline || ''}`.toLowerCase().includes(q)
       )
     }
     if (classification) filtered = filtered.filter(r => r.classification === classification)
@@ -325,13 +336,60 @@ export async function fetchRecalls(params?: {
     if (dietary.length > 0) filtered = filtered.filter(r => matchesDietaryConcerns(r, dietary as DietaryConcern[]))
     const total = filtered.length
     const paged = filtered.slice(cappedSkip, cappedSkip + limit)
-    return { recalls: paged, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: true }
+    const fsisCount = paged.filter(r => r.source === 'USDA').length
+    return { recalls: paged, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: true, fsisCount, fsisError: null }
+  }
+
+  const fsisPromise = fetchFsisRecalls({ signal: params?.signal }).catch((): Awaited<ReturnType<typeof fetchFsisRecalls>> => ({
+    recalls: [],
+    error: { code: 'NETWORK', message: 'FSIS unavailable', retryable: true },
+    isStale: false,
+    fromStatic: false,
+  }))
+
+  const withFsis = async (fdaResult: FetchResult): Promise<FetchResult> => {
+    // Hard FDA failures with no rows: still surface matching USDA recalls when possible
+    const fsis = await fsisPromise
+    const filteredFsis = filterFsisRecalls(fsis.recalls, {
+      search: sanitizeSearchQuery(search),
+      classification,
+      status,
+      state,
+      dietary,
+      matchesDistribution: matchesDistributionPattern,
+    })
+    // Include FSIS on the first page (newest window). Later FDA pages stay FDA-only to avoid dupes.
+    const includeFsis = cappedSkip === 0
+    const merged = mergeRecallFeeds(fdaResult.recalls, filteredFsis, { includeFsis })
+    const fsisCount = includeFsis ? filteredFsis.length : 0
+    const total = (fdaResult.total || 0) + (includeFsis ? filteredFsis.length : 0)
+    // Prefer FDA error only when FDA produced nothing and FSIS also empty
+    if (fdaResult.error && fdaResult.recalls.length === 0 && merged.length > 0) {
+      return {
+        recalls: merged,
+        total: Math.max(total, merged.length),
+        error: null,
+        isStale: fdaResult.isStale || fsis.isStale,
+        lastSynced: fdaResult.lastSynced ?? getLastSynced(),
+        isDemo: false,
+        fsisCount,
+        fsisError: fsis.error,
+      }
+    }
+    return {
+      ...fdaResult,
+      recalls: merged,
+      total: fdaResult.error && merged.length === 0 ? fdaResult.total : total,
+      isStale: fdaResult.isStale || (Boolean(fsis.isStale) && includeFsis),
+      fsisCount,
+      fsisError: fsis.error,
+    }
   }
 
   try {
     if (params?.signal?.aborted) {
       const err: FetchError = { code: 'NETWORK', message: 'Aborted', retryable: false }
-      return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+      return withFsis({ recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false })
     }
     const isBrowser = typeof window !== 'undefined' && window.location.origin !== 'null'
     const proxyBase = isBrowser ? `${window.location.origin}/api/food/enforcement.json` : 'https://api.fda.gov/food/enforcement.json'
@@ -364,19 +422,19 @@ export async function fetchRecalls(params?: {
       if (err.code === 'NOT_FOUND') {
         // Genuine empty — not an error, cache empty result
         setCache(cacheKey, { recalls: [], total: 0 })
-        return { recalls: [], total: 0, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+        return withFsis({ recalls: [], total: 0, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: false })
       }
       // For retryable errors, return stale cache if available with label
       if (cached && cachedEntry) {
-        return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
+        return withFsis({ recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false })
       }
-      return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+      return withFsis({ recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false })
     }
     const raw = await res.json()
     if (!raw || typeof raw !== 'object' || !Array.isArray((raw as any).results)) {
       const err: FetchError = { code: 'MALFORMED', message: 'Malformed FDA response: missing results array', retryable: true }
-      if (cached && cachedEntry) return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
-      return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+      if (cached && cachedEntry) return withFsis({ recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false })
+      return withFsis({ recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false })
     }
     const data = raw as { results: unknown[]; meta?: { results?: { total?: unknown; skip?: unknown; limit?: unknown } } }
     // Validate pagination meta types when present
@@ -384,8 +442,8 @@ export async function fetchRecalls(params?: {
       const m = data.meta.results
       if ((m.total !== undefined && typeof m.total !== 'number') || (m.skip !== undefined && typeof m.skip !== 'number') || (m.limit !== undefined && typeof m.limit !== 'number')) {
         const err: FetchError = { code: 'MALFORMED', message: 'Malformed FDA response: invalid pagination meta', retryable: true }
-        if (cached && cachedEntry) return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
-        return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+        if (cached && cachedEntry) return withFsis({ recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false })
+        return withFsis({ recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false })
       }
     }
     const mapped = (data.results as OpenFDARecord[]).map(mapOpenFDA).filter((r): r is Recall => r !== null)
@@ -395,15 +453,15 @@ export async function fetchRecalls(params?: {
     for (const r of mapped) { if (!seen.has(r.id)) { seen.add(r.id); recalls.push(r) } }
     const total = typeof data.meta?.results?.total === 'number' ? data.meta.results.total : recalls.length
     setCache(cacheKey, { recalls, total })
-    return { recalls, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+    return withFsis({ recalls, total, error: null, isStale: false, lastSynced: getLastSynced(), isDemo: false })
   } catch (e: unknown) {
     const isAbort = e instanceof DOMException && e.name === 'AbortError'
     const err: FetchError = isAbort
       ? { code: 'TIMEOUT', message: 'Request timed out', retryable: true }
       : { code: 'NETWORK', message: e instanceof Error ? e.message : 'Network error', retryable: true }
     if (cached && cachedEntry) {
-      return { recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false }
+      return withFsis({ recalls: cached.recalls, total: cached.total, error: err, isStale: true, lastSynced: new Date(cachedEntry.timestamp).toISOString(), isDemo: false })
     }
-    return { recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false }
+    return withFsis({ recalls: [], total: 0, error: err, isStale: false, lastSynced: getLastSynced(), isDemo: false })
   }
 }

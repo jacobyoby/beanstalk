@@ -19,7 +19,7 @@ function badge(c: string) {
 
 export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary = [] }: Props) {
   const matchedTerms = matchesWatchlist(
-    `${recall.productDescription} ${recall.reasonForRecall} ${recall.recallingFirm}`,
+    `${recall.productDescription} ${recall.reasonForRecall} ${recall.recallingFirm} ${recall.brand || ''} ${recall.hazard || ''} ${recall.headline || ''}`,
     watchlist
   )
   const isWatched = matchedTerms.length > 0
@@ -42,6 +42,16 @@ export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary
       }`}
     >
       <div className="flex gap-2 flex-wrap">
+        <span
+          className={`text-xs px-2 py-1 rounded-full font-medium ${
+            recall.source === 'USDA'
+              ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 border border-green-200 dark:border-green-700'
+              : 'bg-sky-100 text-sky-800 dark:bg-sky-900 dark:text-sky-200 border border-sky-200 dark:border-sky-700'
+          }`}
+          title={recall.source === 'USDA' ? 'USDA FSIS (meat, poultry, egg)' : 'FDA openFDA food enforcement'}
+        >
+          {recall.source === 'USDA' ? 'USDA' : 'FDA'}
+        </span>
         <span className={`text-xs px-2 py-1 rounded-full ${badge(recall.classification)}`}>{recall.classification}</span>
         <span className="text-xs px-2 py-1 rounded-full bg-zinc-100 dark:bg-zinc-700 dark:text-zinc-200 border dark:border-zinc-600">{recall.status}</span>
         {recall.state && (

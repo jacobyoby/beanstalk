@@ -86,8 +86,36 @@ describe('fetchRecalls — no synthetic fallback', () => {
     vi.unstubAllGlobals()
   })
 
+  const emptyFsis = {
+    ok: true,
+    status: 200,
+    headers: { get: () => 'application/json' },
+    json: async () => ({ recalls: [] }),
+    text: async () => '{"recalls":[]}',
+  }
+
+  const isFsisUrl = (url: unknown) => {
+    const s = String(url)
+    return s.includes('/api/fsis') || s.includes('fsis-recalls') || s.includes('fsis.usda.gov')
+  }
+
   const mockSuccess = (results: unknown[] = [{ recall_number: 'F-1', product_description: 'Real', reason_for_recall: 'Hazard', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: 'CA' }]) =>
-    vi.fn().mockResolvedValue({ ok: true, json: async () => ({ results, meta: { results: { total: results.length } } }) })
+    vi.fn().mockImplementation(async (url: string) => {
+      if (isFsisUrl(url)) return emptyFsis
+      return { ok: true, status: 200, headers: { get: () => 'application/json' }, json: async () => ({ results, meta: { results: { total: results.length } } }) }
+    })
+
+  const mockFdaResponse = (opts: { ok?: boolean; status?: number; body?: unknown }) =>
+    vi.fn().mockImplementation(async (url: string) => {
+      if (isFsisUrl(url)) return emptyFsis
+      return {
+        ok: opts.ok ?? false,
+        status: opts.status ?? 500,
+        headers: { get: () => 'application/json' },
+        json: async () => opts.body ?? {},
+        text: async () => JSON.stringify(opts.body ?? {}),
+      }
+    })
 
   it('startup without cache and with success returns live data, not mock', async () => {
     vi.stubGlobal('fetch', mockSuccess())
@@ -96,10 +124,72 @@ describe('fetchRecalls — no synthetic fallback', () => {
     expect(res.error).toBeNull()
     expect(res.isDemo).toBe(false)
     expect(res.recalls[0].productDescription).toBe('Real')
+    expect(res.recalls[0].source).toBe('FDA')
+  })
+
+  it('merges USDA FSIS recalls into the main feed on page 0', async () => {
+    const fsisPayload = {
+      recalls: [{
+        id: 'USDA-099-2026',
+        source: 'USDA',
+        recallNumber: '099-2026',
+        productDescription: 'USDA turkey products',
+        reasonForRecall: 'Salmonella',
+        classification: 'Class I',
+        status: 'Ongoing',
+        distributionPattern: 'Nationwide',
+        recallingFirm: 'Turkey Co',
+        recallInitiationDate: '20260308',
+        productType: 'Meat/Poultry/Egg',
+        city: '',
+        state: '',
+        country: 'United States',
+        eventId: '',
+        codeInfo: '',
+        moreCodeInfo: '',
+        voluntaryMandated: '',
+        address1: '',
+        address2: '',
+        postalCode: '',
+        centerClassificationDate: '',
+        initialFirmNotification: '',
+        productQuantity: '',
+        terminationDate: '',
+      }],
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (url: string) => {
+        if (isFsisUrl(url)) {
+          return {
+            ok: true,
+            status: 200,
+            headers: { get: () => 'application/json' },
+            json: async () => fsisPayload,
+            text: async () => JSON.stringify(fsisPayload),
+          }
+        }
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => 'application/json' },
+          json: async () => ({
+            results: [{ recall_number: 'F-1', product_description: 'Real', reason_for_recall: 'Hazard', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: 'CA', recall_initiation_date: '20260101' }],
+            meta: { results: { total: 1 } },
+          }),
+        }
+      })
+    )
+    const res = await fetchRecalls({ search: '', limit: 6, skip: 0 })
+    expect(res.error).toBeNull()
+    expect(res.recalls.some(r => r.source === 'USDA')).toBe(true)
+    expect(res.recalls.some(r => r.source === 'FDA')).toBe(true)
+    expect(res.fsisCount).toBe(1)
+    expect(res.total).toBe(2)
   })
 
   it('404 NOT_FOUND yields empty, not mock, no error', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({ error: { code: 'NOT_FOUND', message: 'No matches found!' } }) }))
+    vi.stubGlobal('fetch', mockFdaResponse({ ok: false, status: 404, body: { error: { code: 'NOT_FOUND', message: 'No matches found!' } } }))
     const res = await fetchRecalls({ search: 'nomatch123', limit: 6, skip: 0 })
     expect(res.recalls).toEqual([])
     expect(res.total).toBe(0)
@@ -132,7 +222,7 @@ describe('fetchRecalls — no synthetic fallback', () => {
     const first = await fetchRecalls({ search: '', limit: 6, skip: 0 })
     expect(first.error).toBeNull()
     // Now 429
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 429, json: async () => ({ error: { message: 'Rate limited' } }) }))
+    vi.stubGlobal('fetch', mockFdaResponse({ ok: false, status: 429, body: { error: { message: 'Rate limited' } } }))
     const res = await fetchRecalls({ search: '', limit: 6, skip: 0 })
     expect(res.error?.code).toBe('RATE_LIMIT')
     expect(res.isStale).toBe(true)
@@ -140,7 +230,7 @@ describe('fetchRecalls — no synthetic fallback', () => {
   })
 
   it('503 server failure returns SERVER, retryable', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 503, json: async () => ({ error: { message: 'Service Unavailable' } }) }))
+    vi.stubGlobal('fetch', mockFdaResponse({ ok: false, status: 503, body: { error: { message: 'Service Unavailable' } } }))
     const res = await fetchRecalls({ search: '', limit: 6, skip: 0 })
     expect(res.error?.code).toBe('SERVER')
     expect(res.error?.retryable).toBe(true)
@@ -148,14 +238,14 @@ describe('fetchRecalls — no synthetic fallback', () => {
   })
 
   it('400 bad request returns BAD_REQUEST, not retryable', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 400, json: async () => ({ error: { message: 'Invalid parameter' } }) }))
+    vi.stubGlobal('fetch', mockFdaResponse({ ok: false, status: 400, body: { error: { message: 'Invalid parameter' } } }))
     const res = await fetchRecalls({ search: 'M&M', limit: 6, skip: 0 })
     expect(res.error?.code).toBe('BAD_REQUEST')
     expect(res.error?.retryable).toBe(false)
   })
 
   it('malformed payload returns MALFORMED', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ meta: {} }) })) // missing results
+    vi.stubGlobal('fetch', mockFdaResponse({ ok: true, status: 200, body: { meta: {} } })) // missing results
     const res = await fetchRecalls({ search: '', limit: 6, skip: 0 })
     expect(res.error?.code).toBe('MALFORMED')
   })
@@ -170,16 +260,17 @@ describe('fetchRecalls — no synthetic fallback', () => {
     expect(rec.recalls[0].productDescription).toBe('Recovered')
   })
 
-  it('demo mode returns conspicuously fictional data', async () => {
+  it('demo mode returns conspicuously fictional data including USDA fixtures', async () => {
     // Enable demo via query
     const url = new URL(window.location.href)
     url.searchParams.set('demo', '1')
     window.history.replaceState({}, '', url.toString())
     vi.stubGlobal('fetch', mockSuccess()) // should not be called
-    const res = await fetchRecalls({ search: '', limit: 6, skip: 0 })
+    const res = await fetchRecalls({ search: '', limit: 20, skip: 0 })
     expect(res.isDemo).toBe(true)
     expect(res.recalls[0].productDescription.startsWith('DEMO — Fictional')).toBe(true)
     expect(res.recalls[0].recallNumber.startsWith('DEMO-')).toBe(true)
+    expect(res.recalls.some(r => r.source === 'USDA')).toBe(true)
     // cleanup
     url.searchParams.delete('demo')
     window.history.replaceState({}, '', url.toString())
@@ -194,13 +285,21 @@ describe('fetchRecalls — no synthetic fallback', () => {
   })
 
   it('preserves more_code_info without truncation', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        results: [{ recall_number: 'F-2258-2016', code_info: 'a'.repeat(32600), more_code_info: 'Lots 8L5M30, ' + 'x'.repeat(9130), product_description: 'Test', reason_for_recall: 'X', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: '' }],
-        meta: { results: { total: 1 } }
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (url: string) => {
+        if (isFsisUrl(url)) return emptyFsis
+        return {
+          ok: true,
+          status: 200,
+          headers: { get: () => 'application/json' },
+          json: async () => ({
+            results: [{ recall_number: 'F-2258-2016', code_info: 'a'.repeat(32600), more_code_info: 'Lots 8L5M30, ' + 'x'.repeat(9130), product_description: 'Test', reason_for_recall: 'X', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: '' }],
+            meta: { results: { total: 1 } },
+          }),
+        }
       })
-    }))
+    )
     const res = await fetchRecalls({ search: 'F-2258-2016', limit: 6, skip: 0 })
     expect(res.recalls[0].codeInfo.length).toBe(32600)
     expect(res.recalls[0].moreCodeInfo).toContain('8L5M30')
@@ -212,22 +311,37 @@ describe('fetchRecalls — no synthetic fallback', () => {
     // Simulate two overlapping fetches where first is slower
     let firstResolve: (v: Response) => void
     const firstPromise = new Promise<Response>(r => { firstResolve = r })
-    const secondPromise = Promise.resolve({ ok: true, json: async () => ({ results: [{ recall_number: 'F-2', product_description: 'Second', reason_for_recall: 'X', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: '' }], meta: { results: { total: 1 } } }) } as Response)
-    const fetchMock = vi.fn()
-      .mockReturnValueOnce(firstPromise)
-      .mockReturnValueOnce(secondPromise)
+    const secondBody = {
+      ok: true,
+      status: 200,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ results: [{ recall_number: 'F-2', product_description: 'Second', reason_for_recall: 'X', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: '' }], meta: { results: { total: 1 } } }),
+    } as unknown as Response
+    const fetchMock = vi.fn().mockImplementation((url: string) => {
+      if (isFsisUrl(url)) return Promise.resolve(emptyFsis as unknown as Response)
+      const s = String(url)
+      if (s.includes('first')) return firstPromise
+      if (s.includes('second')) return Promise.resolve(secondBody)
+      return Promise.resolve(secondBody)
+    })
     vi.stubGlobal('fetch', fetchMock)
     // Start first
     const p1 = fetchRecalls({ search: 'first', limit: 6, skip: 0 })
     // Start second before first resolves
     const p2 = fetchRecalls({ search: 'second', limit: 6, skip: 0 })
-    firstResolve!({ ok: true, json: async () => ({ results: [{ recall_number: 'F-1', product_description: 'First', reason_for_recall: 'X', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: '' }], meta: { results: { total: 1 } } }) } as Response)
+    firstResolve!({
+      ok: true,
+      status: 200,
+      headers: { get: () => 'application/json' },
+      json: async () => ({ results: [{ recall_number: 'F-1', product_description: 'First', reason_for_recall: 'X', classification: 'Class I', status: 'Ongoing', recalling_firm: 'Firm', distribution_pattern: '' }], meta: { results: { total: 1 } } }),
+    } as unknown as Response)
     const [r1, r2] = await Promise.all([p1, p2])
     // Both resolve, caller would use generation to keep second
     expect(r1.recalls[0].productDescription).toBe('First')
     expect(r2.recalls[0].productDescription).toBe('Second')
-    // Verify fetch called twice with different search params
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    // FDA endpoints called for both searches (FSIS calls also occur)
+    const fdaCalls = fetchMock.mock.calls.filter((c: unknown[]) => !isFsisUrl(c[0]))
+    expect(fdaCalls.length).toBeGreaterThanOrEqual(2)
   })
 })
 

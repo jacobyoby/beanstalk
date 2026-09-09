@@ -40,6 +40,13 @@ export default defineConfig({
           })
         },
       },
+      // USDA FSIS RSS (CORS-blocked in browsers) — raw XML for client-side parse in dev
+      '/api/fsis-rss': {
+        target: 'https://www.fsis.usda.gov',
+        changeOrigin: true,
+        secure: true,
+        rewrite: path => path.replace(/^\/api\/fsis-rss/, ''),
+      },
     },
   },
   test: {
