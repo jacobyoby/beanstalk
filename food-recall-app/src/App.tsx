@@ -165,8 +165,8 @@ export default function App() {
                   <span className="text-sm text-zinc-600 dark:text-zinc-400 dark:text-zinc-400" aria-live="polite">Page {page+1} / {totalPages} • {hasTruncatedWindow ? `${reachableTotal} of ${total} reachable` : `${total} results`} {isStale ? '(stale)' : ''}</span>
                   <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]" aria-label="Next page">Next</button>
                 </div>
-                {hasTruncatedWindow && <p className="text-xs text-amber-700 text-center mt-2">Showing first {reachableTotal.toLocaleString()} of {total.toLocaleString()} • Narrow filters to see more • FDA offset limit {FDA_MAX_SKIP.toLocaleString()} prevents beyond page {maxPage+1}</p>}
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-2">Sorted by report_date desc • Dates shown are recall_initiation_date or report_date from FDA</p>
+                {hasTruncatedWindow && <p className="text-xs text-amber-700 text-center mt-2">Showing the first {reachableTotal.toLocaleString()} of {total.toLocaleString()}. FDA&apos;s offset limit of {FDA_MAX_SKIP.toLocaleString()} stops paging after page {maxPage + 1}; narrow the filters to see more.</p>}
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-2">Sorted by report_date, newest first. Dates shown are recall_initiation_date or report_date from FDA.</p>
               </>
             )}
           </section>
