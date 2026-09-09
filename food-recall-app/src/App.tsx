@@ -12,7 +12,7 @@ import { type FetchError, fetchRecalls, getLastSynced } from "./lib/api";
 import type { DietaryConcern } from "./lib/dietary";
 import { eventSearchText, fetchAdverseEvents, getEventLastSynced } from "./lib/events";
 import { isNewRecall } from "./lib/formatDate";
-import { sendNotification } from "./lib/notifications";
+import { getPermissionStatus, requestNotificationPermission, sendNotification } from "./lib/notifications";
 import { matchesWatchlist } from "./lib/watchlist";
 import type { AdverseEvent } from "./types/event";
 import { FDA_EVENT_DISCLAIMER } from "./types/event";
@@ -38,7 +38,15 @@ export default function App() {
   const [selected, setSelected] = useState<Recall | null>(null);
   const [page, setPage] = useState(0);
   const [lastSynced, setLastSynced] = useState<string | null>(getLastSynced());
-  const [notificationsEnabled] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    if (typeof window === "undefined" || !("Notification" in window)) return false;
+    if (Notification.permission !== "granted") return false;
+    try {
+      return localStorage.getItem("notificationsEnabled") === "true";
+    } catch {
+      return true;
+    }
+  });
   const { items: watchlist, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist();
   const { dark, toggle: toggleDark } = useDarkMode();
   const seenIdsRef = useRef<Set<string>>(new Set());
@@ -47,6 +55,15 @@ export default function App() {
   const abortRef = useRef<AbortController | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const triggerReload = () => setReloadKey((k) => k + 1);
+  const handleEnableNotifications = async () => {
+    const granted = await requestNotificationPermission();
+    setNotificationsEnabled(granted);
+    try {
+      localStorage.setItem("notificationsEnabled", String(granted));
+    } catch {
+      /* storage unavailable */
+    }
+  };
 
   // Adverse events (Early Signals) state
   const [events, setEvents] = useState<AdverseEvent[]>([]);
@@ -265,6 +282,25 @@ export default function App() {
                 </>
               )}
             </div>
+            {!notificationsEnabled && getPermissionStatus() !== "denied" && (
+              <button
+                type="button"
+                onClick={handleEnableNotifications}
+                aria-label="Enable browser alert notifications for watchlist recalls"
+                className="px-3 py-2 border-zinc-400 dark:border-zinc-500 rounded-lg text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px]"
+              >
+                Enable Alerts
+              </button>
+            )}
+            {notificationsEnabled && (
+              <span
+                className="px-3 py-2 text-sm text-green-700 dark:text-green-400 min-h-[44px] flex items-center"
+                aria-label="Browser alert notifications are enabled"
+                role="status"
+              >
+                🔔 Alerts on
+              </span>
+            )}
             <button
               type="button"
               onClick={toggleDark}
