@@ -16,7 +16,7 @@ import { sendNotification } from "./lib/notifications";
 import { matchesWatchlist } from "./lib/watchlist";
 import type { AdverseEvent } from "./types/event";
 import { FDA_EVENT_DISCLAIMER } from "./types/event";
-import type { Recall, RecallClassification } from "./types/recall";
+import { OPENFDA_AS_PUBLISHED, type Recall, type RecallClassification } from "./types/recall";
 
 type AppTab = "recalls" | "events";
 
@@ -248,16 +248,16 @@ export default function App() {
             </p>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
               {tab === "recalls"
-                ? "Source: openFDA Food Enforcement (2004-present). Status is FDA-reported, not verified real-time lifecycle."
-                : "Source: openFDA Food Adverse Event reports (CAERS). Unverified community/industry reports — not recalls."}
+                ? `${OPENFDA_AS_PUBLISHED} Food Enforcement archive (2004–present). Dataset typically refreshes mid-week (Wednesday publish lag).`
+                : `${OPENFDA_AS_PUBLISHED} CAERS adverse event reports are unverified community/industry reports — not recalls.`}
             </p>
           </div>
           <div className="flex items-center gap-2">
             <div className="text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-zinc-700 dark:text-zinc-300 max-w-sm">
               {tab === "recalls" ? (
                 <>
-                  <strong>FDA scope:</strong> Enforcement archive; status may remain Ongoing after publication. Verify
-                  with FDA before action.
+                  <strong>FDA scope:</strong> {OPENFDA_AS_PUBLISHED} Status may remain Ongoing after a recall ends.
+                  Verify with FDA before action.
                 </>
               ) : (
                 <>
@@ -394,11 +394,17 @@ export default function App() {
               )}
               <WatchlistPanel items={watchlist} onAdd={addToWatchlist} onRemove={removeFromWatchlist} />
               {tab === "recalls" ? (
-                <div className="text-xs text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-700 border-zinc-400 rounded-lg p-3">
+                <div className="text-xs text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-700 border-zinc-400 rounded-lg p-3 space-y-2">
                   <p className="font-semibold">Classification</p>
                   <p>
                     Class I = reasonable probability of serious adverse health consequences (21 CFR 7.3). Displayed per
                     FDA record.
+                  </p>
+                  <p className="font-semibold">Search notes</p>
+                  <p>
+                    No matches return openFDA 404 (shown as empty). Paging stops at skip 25,000;{" "}
+                    <code className="text-[11px]">search_after</code> is not used. Related events match any product
+                    token (parenthesized OR).
                   </p>
                 </div>
               ) : (
@@ -625,8 +631,8 @@ export default function App() {
           openFDA Food Adverse Events
         </a>
         {" · "}
-        Early Signals are unverified community reports, not recalls. Verify with FDA before action. • Not medical
-        advice.
+        {OPENFDA_AS_PUBLISHED} Early Signals are unverified community reports, not recalls. Verify with FDA before
+        action. • Not medical advice.
       </footer>
     </div>
   );

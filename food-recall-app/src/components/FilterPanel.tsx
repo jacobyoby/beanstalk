@@ -59,6 +59,9 @@ export default function FilterPanel({
         <label htmlFor="status-select" className="text-xs font-medium dark:text-zinc-300">
           Status
         </label>
+        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5">
+          As published by openFDA — not live FDA lifecycle
+        </p>
         <select
           id="status-select"
           value={status}

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FDA_EVENT_DISCLAIMER } from "../types/event";
+import { OPENFDA_AS_PUBLISHED } from "../types/recall";
 import {
   buildEventSearchClause,
   buildEventSearchParam,
@@ -17,6 +18,13 @@ describe("FDA_EVENT_DISCLAIMER", () => {
   it("states data is not scientifically verified and not a recall", () => {
     expect(FDA_EVENT_DISCLAIMER.toLowerCase()).toMatch(/not scientifically verified/);
     expect(FDA_EVENT_DISCLAIMER.toLowerCase()).toMatch(/not confirmed recalls|unverified/);
+  });
+});
+
+describe("OPENFDA_AS_PUBLISHED", () => {
+  it("labels records as published by openFDA, not live lifecycle", () => {
+    expect(OPENFDA_AS_PUBLISHED.toLowerCase()).toMatch(/as published by openfda/);
+    expect(OPENFDA_AS_PUBLISHED.toLowerCase()).toMatch(/not a live fda recall lifecycle/);
   });
 });
 

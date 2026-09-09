@@ -227,6 +227,7 @@ function parseErrorCode(status: number, body: unknown): FetchError {
     typeof body === "object" && body !== null && "error" in body
       ? String((body as { error: { message?: string } }).error.message || "")
       : "";
+  // openFDA returns HTTP 404 + "No matches found" for empty result sets — expected, not an outage.
   if (status === 404 && /no matches/i.test(msg)) {
     return { code: "NOT_FOUND", message: "No matches found", status, retryable: false };
   }
@@ -264,6 +265,7 @@ export async function fetchAdverseEvents(params?: {
   const skip = params?.skip ?? 0;
   const search = params?.search || "";
   const searchParam = params?.searchOverride ?? buildEventSearchParam(search);
+  // openFDA rejects skip > 25,000; we do not implement search_after. Cap and refuse the request.
   const cappedSkip = Math.min(skip, 25000);
   if (cappedSkip !== skip) {
     return {
@@ -428,7 +430,10 @@ export async function fetchAdverseEvents(params?: {
   }
 }
 
-/** Convenience for related-events lookup from a recall product description. */
+/**
+ * Convenience for related-events lookup from a recall product description.
+ * Token-level parenthesized OR (not phrase match) lives in buildRelatedEventSearchClause (#102).
+ */
 export async function fetchRelatedEvents(productHint: string, signal?: AbortSignal): Promise<EventFetchResult> {
   const clause = buildRelatedEventSearchClause(productHint);
   if (!clause) {

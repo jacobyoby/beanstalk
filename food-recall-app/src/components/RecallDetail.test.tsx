@@ -51,6 +51,7 @@ describe("RecallDetail", () => {
   it("renders status", () => {
     render(<RecallDetail recall={makeRecall()} onClose={() => {}} />);
     expect(screen.getByText("Ongoing")).toBeTruthy();
+    expect(screen.getByText(/as published by openFDA/i)).toBeTruthy();
   });
 
   it("renders reason for recall", () => {

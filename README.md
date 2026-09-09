@@ -6,7 +6,7 @@ Beanstalk is a calm, searchable interface for the FDA's food enforcement archive
 
 [Open the live app](https://jacobyoby.github.io/beanstalk/) · [Browse openFDA's source](https://open.fda.gov/apis/food/enforcement/)
 
-> Beanstalk is a record browser, not a real-time safety alert service. FDA statuses may be out of date. Verify the source notice before acting on a recall.
+> Beanstalk is a record browser, not a real-time safety alert service. Recall data is **as published by openFDA**, not a live FDA recall-lifecycle feed. Statuses may stay Ongoing after a recall ends. Verify the source notice before acting.
 
 ## What it does
 
@@ -18,7 +18,7 @@ Beanstalk is a calm, searchable interface for the FDA's food enforcement archive
 - Supports a local watchlist with optional browser alerts while the app is open.
 - Installs as a lightweight PWA and includes an explicit fictional demo mode at `?demo=1`.
 
-Live mode uses FDA records. Demo records are labeled fictional; they are never presented as live recalls.
+Live mode uses records **as published by openFDA**. Demo records are labeled fictional; they are never presented as live recalls.
 
 ## Run it locally
 
@@ -56,7 +56,14 @@ food-recall-app/
 
 ## Data and trust boundary
 
-Beanstalk reads the [openFDA Food Enforcement API](https://open.fda.gov/apis/food/enforcement/) and [openFDA Food Adverse Event API](https://open.fda.gov/apis/food/event/) (CAERS). The app preserves FDA-provided fields, identifies saved results when live retrieval fails, and links back to FDA source views for verification.
+Beanstalk reads the [openFDA Food Enforcement API](https://open.fda.gov/apis/food/enforcement/) and [openFDA Food Adverse Event API](https://open.fda.gov/apis/food/event/) (CAERS). Records are **as published by openFDA**, not a live FDA recall-lifecycle feed. The app preserves FDA-provided fields, identifies saved results when live retrieval fails, and links back to FDA source views for verification.
+
+### openFDA search and freshness gotchas
+
+- **Empty / no-match search → HTTP 404** is expected. openFDA returns `404` + “No matches found”; Beanstalk treats that as zero results, not an outage.
+- **Wednesday publish lag.** The enforcement dataset typically refreshes mid-week. Do not treat “retrieved today” as a same-day FDA lifecycle update.
+- **`skip` max 25,000.** openFDA rejects deeper offset paging. This app caps `skip` and does **not** use `search_after`. Narrow filters to see more of a large result set.
+- **Related Events** use a parenthesized **OR** of product tokens (not a single phrase; [#102](https://github.com/jacobyoby/beanstalk/pull/102)). Do not treat a zero-hit related-events list as an API failure.
 
 This project is not medical advice. For meat, poultry, or processed egg products, also check [USDA FSIS recalls](https://www.fsis.usda.gov/recalls).
 

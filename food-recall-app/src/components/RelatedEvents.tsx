@@ -37,7 +37,8 @@ export default function RelatedEvents({ productDescription, onSelectEvent }: Pro
     <div className="mt-6 border-t dark:border-zinc-700 pt-4">
       <h3 className="text-sm font-semibold dark:text-zinc-100">Related adverse event reports</h3>
       <p className="text-[11px] text-violet-800 dark:text-violet-300 mt-1 mb-3" role="note">
-        {FDA_EVENT_DISCLAIMER}
+        Matches any product token (parenthesized OR), as published by openFDA CAERS — not live FDA lifecycle. No matches
+        return openFDA 404 (shown as none found). {FDA_EVENT_DISCLAIMER}
       </p>
       {loading && (
         <p className="text-xs text-zinc-500 dark:text-zinc-400" role="status">
