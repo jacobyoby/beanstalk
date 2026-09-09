@@ -26,3 +26,6 @@ npm run build   # output: food-recall-app/dist
 
 ## Docs
 See [development notes](food-recall-app/README.md) and the [Pages deployment procedure](docs/github-pages-demo.md).
+
+## Support
+[Donate / Support Jacobrakai Foundation — JACOBRAKAI FOUNDATION 501(c)(3)](https://donate.stripe.com/eVq4gy97DanS9h60phfrW00)
