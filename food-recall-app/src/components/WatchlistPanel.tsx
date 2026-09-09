@@ -25,7 +25,7 @@ export default function WatchlistPanel({ items, onAdd, onRemove, alertsEnabled, 
     <div className="panel">
       <div className="flex items-center justify-between px-4 py-3">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">Watchlist</h2>
-        <span className="hint">{items.length} {items.length === 1 ? 'term' : 'terms'}</span>
+        <span className="hint">{items.length} {items.length === 1 ? 'keyword' : 'keywords'}</span>
       </div>
 
       <div className="space-y-3 border-t border-zinc-100 px-4 py-4 dark:border-zinc-800">
@@ -35,7 +35,7 @@ export default function WatchlistPanel({ items, onAdd, onRemove, alertsEnabled, 
             id="watchlist-input"
             value={input}
             onChange={e => setInput(e.target.value)}
-            placeholder="Brand, keyword, allergen"
+            placeholder="Add a keyword"
             autoComplete="off"
             className="input min-w-0 flex-1"
           />
@@ -43,7 +43,7 @@ export default function WatchlistPanel({ items, onAdd, onRemove, alertsEnabled, 
         </form>
 
         {items.length === 0 ? (
-          <p className="hint">Recalls that mention a term get a “Watching” tag.</p>
+          <p className="hint">Add a keyword to mark matching recalls with a “Watching” tag.</p>
         ) : (
           <ul className="flex flex-wrap gap-1.5" aria-label="Watchlist terms">
             {items.map(term => (
@@ -64,7 +64,7 @@ export default function WatchlistPanel({ items, onAdd, onRemove, alertsEnabled, 
 
         {alertsSupported && (
           <div className="flex items-center justify-between gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-            <p className="hint">Browser alerts: {alertsEnabled ? 'on' : 'off'}. Alerts cover newly observed watchlist matches while this app is open; there is no background monitoring.</p>
+            <p className="hint">Browser alerts: {alertsEnabled ? 'on' : 'off'}. Newly seen watchlist matches can trigger an alert while the app is open. No checks run in the background.</p>
             {!alertsEnabled && (
               <button type="button" onClick={onEnableAlerts} className="btn btn-quiet shrink-0 px-3 text-xs" aria-label="Enable browser alerts while the app is open">Enable</button>
             )}

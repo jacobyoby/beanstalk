@@ -44,16 +44,16 @@ export default function DietaryFilter({ selected, onChange }: Props) {
   return (
     <div className="space-y-3">
       <ConcernGroup legend="FDA major allergens" concerns={ALLERGENS} selected={selected} onToggle={toggle} />
-      <ConcernGroup legend="Broader diets (text matches)" concerns={BROADER} selected={selected} onToggle={toggle} />
+      <ConcernGroup legend="Other dietary terms" concerns={BROADER} selected={selected} onToggle={toggle} />
       {selected.length > 0 && (
         <p className="text-xs font-medium text-indigo-800 dark:text-indigo-300">
-          Showing recalls mentioning {selected.map(s => DIETARY_LABELS[s]).join(', ')}
+          Matching any of: {selected.map(s => DIETARY_LABELS[s]).join(', ')}
         </p>
       )}
       <details className="hint">
         <summary className="min-h-[44px] cursor-pointer select-none py-3">How dietary matching works</summary>
-        <p className="mt-1">Matches recall reason or product description (source-stated). Absence of a term does not mean allergen-free. Wheat allergy is distinct from gluten.</p>
-        <p>Vegan, vegetarian, halal, and kosher match words in the source, not certifications. Gluten matching includes wheat, barley, rye, malt, and oats; a match is not confirmation of gluten content.</p>
+        <p className="mt-1">Looks for words in the product description or recall reason. Select more than one concern to see matches for any of them. A product can contain an allergen even if there is no match.</p>
+        <p>Vegan, vegetarian, halal, and kosher are text matches, not verified certifications. Wheat and gluten are separate filters. Gluten searches also look for wheat, barley, rye, malt, and oats; a match does not confirm gluten content.</p>
       </details>
     </div>
   )

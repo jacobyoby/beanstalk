@@ -12,7 +12,7 @@ interface Props {
 export default function StateFilter({ selected, onChange }: Props) {
   return (
     <div>
-      <label htmlFor="state-select" className="label mb-1">Sold in state</label>
+      <label htmlFor="state-select" className="label mb-1">Distributed in</label>
       <select
         id="state-select"
         value={selected}
@@ -27,8 +27,8 @@ export default function StateFilter({ selected, onChange }: Props) {
       </select>
       <details className="hint mt-1">
         <summary className="min-h-[44px] cursor-pointer select-none py-3">How state matching works</summary>
-        <p className="mt-1">Matches reported distribution, not the firm's location. Nationwide records can match any state.</p>
-        <p>State filters can miss records with unclear or incomplete distribution. Read the full source text in each record.</p>
+        <p className="mt-1">Searches the record's distribution text, not the firm's address. Nationwide records can appear for any state.</p>
+        <p>A state filter can miss records with missing or incomplete distribution details. Open a record to read the full text.</p>
       </details>
     </div>
   )

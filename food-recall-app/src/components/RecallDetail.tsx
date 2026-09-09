@@ -121,7 +121,7 @@ export default function RecallDetail({ recall, isDemo = false, onClose }: Props)
             <p className="hint mt-2">{isDemo ? 'Fictional classification for interface demonstration.' : risk.definition}</p>
           </Section>
 
-          <Section title="Where it was sold">
+          <Section title="Where it was distributed">
             <p>{recall.distributionPattern || 'Not stated'}</p>
           </Section>
 
@@ -133,7 +133,7 @@ export default function RecallDetail({ recall, isDemo = false, onClose }: Props)
 
           <Section title="Who recalled it">
             <dl className="divide-y divide-zinc-100 dark:divide-zinc-800">
-              <Fact term="Firm">{recall.recallingFirm || 'Not stated'}{firmLocation && ` · ${firmLocation}`}</Fact>
+              <Fact term="Company">{recall.recallingFirm || 'Not stated'}{firmLocation && ` · ${firmLocation}`}</Fact>
               {address && <Fact term="Address">{address}</Fact>}
               <Fact term="Type">{recall.voluntaryMandated || 'Not stated'}</Fact>
               {recall.initialFirmNotification && <Fact term="Notified by">{recall.initialFirmNotification}</Fact>}
@@ -148,10 +148,10 @@ export default function RecallDetail({ recall, isDemo = false, onClose }: Props)
             </dl>
           </Section>
 
-          <Section title="Record">
+          <Section title={isDemo ? 'Demo record' : 'FDA record'}>
             <dl className="divide-y divide-zinc-100 dark:divide-zinc-800">
               <Fact term="Recall number">{recall.recallNumber || 'Not stated'}</Fact>
-              <Fact term="Event">{recall.eventId || 'Not stated'}</Fact>
+              <Fact term="Event number">{recall.eventId || 'Not stated'}</Fact>
               <Fact term="Classification">{recall.classification}{classificationNote}</Fact>
               <Fact term="Status">{recall.status}{statusNote}</Fact>
             </dl>
@@ -161,14 +161,14 @@ export default function RecallDetail({ recall, isDemo = false, onClose }: Props)
               rel="noreferrer"
               className="mt-3 inline-flex min-h-[44px] items-center text-sm font-medium text-emerald-800 underline underline-offset-2 dark:text-emerald-300"
             >
-              View on FDA Enforcement Reports
+              Search FDA enforcement reports
             </a>
             <p className="hint"><a
               href={`https://api.fda.gov/food/enforcement.json?${new URLSearchParams({ search: `recall_number:"${recall.recallNumber}"` })}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex min-h-[44px] items-center underline underline-offset-2"
-            >Raw openFDA JSON</a></p></>}
+            >Source record (openFDA JSON)</a></p></>}
           </Section>
         </div>
       </div>

@@ -17,7 +17,7 @@ export default function SearchBar({ value, onChange }: Props) {
           type="search"
           value={value}
           onChange={e => onChange(e.target.value)}
-          placeholder="Product, reason, or firm"
+          placeholder="Product or company"
           autoComplete="off"
           className="input pl-9 pr-12"
         />

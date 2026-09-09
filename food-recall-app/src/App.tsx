@@ -154,7 +154,7 @@ export default function App() {
 
       <header className="site-header">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-6">
-          <h1 className="flex max-w-full flex-wrap items-center gap-3">
+          <h1 className="flex max-w-full flex-wrap items-center gap-3" aria-label="beanstalk FDA food recall explorer">
             <span className="flex flex-col gap-1">
               <span className="brand-name"><span className="sprouting-b">b<svg className="wordmark-leaves" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M12 44c0-12 7-21 15-28" /><path d="M17 30C7 31 2 24 3 17c9-1 17 5 14 13ZM22 23C20 13 29 5 39 6c0 10-8 19-17 17Z" fill="currentColor" fillOpacity=".13" /></svg></span>eanstalk</span>
               <span className="text-xs font-normal tracking-wide text-zinc-500 dark:text-zinc-400">FDA food recall explorer</span>
@@ -183,9 +183,9 @@ export default function App() {
         )}
         {isStale && (
           <div className="bg-amber-700 px-4 py-2 text-center text-sm text-white" role="status">
-            Stale cached data. The live FDA request failed ({error?.code}).{' '}
+            Showing a saved copy. We couldn’t reach the FDA for an update.{' '}
             <button type="button" onClick={triggerReload} className="font-medium underline underline-offset-2">Retry</button>
-            <span> · cached from {formatRetrieved(lastSynced)}</span>
+            <span> · saved {formatRetrieved(lastSynced)}</span>
           </div>
         )}
       </header>
@@ -194,7 +194,7 @@ export default function App() {
         <div className="garden-intro">
           <div>
             <h2>A little clarity for your pantry.</h2>
-            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Look up a product. Explore the details.</p>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Search by product, state, or dietary concern.</p>
           </div>
           <PantrySketch />
         </div>
@@ -219,20 +219,18 @@ export default function App() {
               <p className="text-sm text-zinc-700 dark:text-zinc-300" role="status" aria-live="polite">
                 {loading
                   ? 'Loading recalls…'
-                  : hasTruncatedWindow
-                    ? `${reachableTotal.toLocaleString()} of ${total.toLocaleString()} recalls reachable`
-                    : `${total.toLocaleString()} ${total === 1 ? 'recall' : 'recalls'}`}
-                {!loading && ' · newest first'}
-                {!loading && isStale && ' · stale'}
+                  : `${total.toLocaleString()} ${total === 1 ? 'recall record' : 'recall records'}`}
+                {!loading && ' · latest reports first'}
+                {!loading && isStale && ' · saved copy'}
               </p>
-              <p className="hint">{isDemo ? 'Fictional examples for exploring the interface.' : 'FDA enforcement archive · status as reported by FDA, not verified · not a public safety alert'}</p>
+              <p className="hint">{isDemo ? 'Fictional examples for exploring the interface.' : 'FDA archive · check the source notice for updates'}</p>
             </div>
 
             {loading && <SkeletonGrid />}
 
             {showError && error && (
               <div className="panel px-6 py-12 text-center">
-                <p className="font-medium text-zinc-900 dark:text-zinc-50" role="alert">Could not load recalls</p>
+                <p className="font-medium text-zinc-900 dark:text-zinc-50" role="alert">Recalls couldn’t load</p>
                 <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{error.message} ({error.code})</p>
                 {error.retryable && <button type="button" onClick={triggerReload} className="btn btn-primary mt-4">Retry</button>}
               </div>
@@ -241,8 +239,8 @@ export default function App() {
             {showEmpty && (
               <div className="panel px-6 py-12 text-center" role="status">
                 <BeanstalkMark className="mx-auto mb-4 h-16 w-16 text-zinc-500 dark:text-zinc-400" />
-                <p className="font-medium text-zinc-900 dark:text-zinc-50">No recalls match</p>
-                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Try fewer filters or a broader search term.</p>
+                <p className="font-medium text-zinc-900 dark:text-zinc-50">No matching records</p>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Try a shorter search or remove a filter. No results doesn’t mean a product is safe.</p>
                 {(activeFilters > 0 || query) && <button type="button" onClick={clearAll} className="btn mt-4">Clear filters</button>}
               </div>
             )}
@@ -261,10 +259,10 @@ export default function App() {
                 </nav>
                 {hasTruncatedWindow && (
                   <p className="hint mt-3 text-center">
-                    Showing the first {reachableTotal.toLocaleString()} of {total.toLocaleString()}. FDA's offset limit of {FDA_MAX_SKIP.toLocaleString()} stops paging after page {maxPage + 1}; narrow the filters to see more.
+                    You can browse the first {reachableTotal.toLocaleString()} of these {total.toLocaleString()} records. To find older records beyond the FDA’s browsing limit, narrow your search or add a filter.
                   </p>
                 )}
-                {!isDemo && <p className="hint mt-2 text-center">Sorted by report_date, newest first. Dates shown are recall_initiation_date or report_date from FDA.</p>}
+                {!isDemo && <p className="hint mt-2 text-center">Sorted by FDA report date. Card dates show when the recall began, or the report date if no start date is listed.</p>}
               </>
             )}
           </section>
@@ -279,15 +277,15 @@ export default function App() {
             <summary className="cursor-pointer font-medium text-zinc-800 dark:text-zinc-200">About this data</summary>
             <div className="mt-2 max-w-prose space-y-2">
               <p>
-                Source: <a className="underline underline-offset-2" href="https://open.fda.gov/apis/food/enforcement/" target="_blank" rel="noreferrer">openFDA Food Enforcement API</a>, 2004 to present.
-                It is an enforcement archive: status is FDA-reported and may remain Ongoing after publication. It is not a public safety alert feed; verify with FDA before acting.
+                Records come from <a className="underline underline-offset-2" href="https://open.fda.gov/apis/food/enforcement/" target="_blank" rel="noreferrer">openFDA’s food enforcement archive</a>, from 2004 onward.
+                This is a record of published recalls, not a live safety alert service. Statuses come from the FDA and may be out of date. Check the source notice for current information.
               </p>
               <p>
-                {isStale ? `Stale cache from ${formatRetrieved(lastSynced)}` : lastSynced ? `Last retrieved ${formatRetrieved(lastSynced)}` : 'No retrieval yet'}. Live and cached results are labelled per result set.
+                {isStale ? `Showing a copy saved ${formatRetrieved(lastSynced)}` : lastSynced ? `These records were loaded ${formatRetrieved(lastSynced)}` : 'Records have not loaded yet'}. The status above shows whether the current results came from the FDA or a saved copy.
               </p>
-              <p>Class I means a reasonable probability of serious adverse health consequences (21 CFR 7.3). Classes are displayed exactly as the FDA record states them.</p>
+              <p>Risk labels describe the FDA’s recall classifications. Class I is the most serious. Open a record for the full definition and source details.</p>
               <p>
-                Meat, poultry, and egg products are regulated by <a className="underline underline-offset-2" href="https://www.fsis.usda.gov/recalls" target="_blank" rel="noreferrer">USDA FSIS</a> and are not in this dataset.
+                For meat, poultry, and processed egg products, see <a className="underline underline-offset-2" href="https://www.fsis.usda.gov/recalls" target="_blank" rel="noreferrer">USDA FSIS recalls</a>.
               </p>
             </div>
           </details>}

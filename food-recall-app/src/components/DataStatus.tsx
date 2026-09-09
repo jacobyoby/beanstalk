@@ -18,15 +18,15 @@ export default function DataStatus({ isDemo, isStale, error, lastSynced }: Props
     return <Pill dot="bg-violet-500" text="Demo data" detail="fictional records" />
   }
   if (isStale) {
-    return <Pill dot="bg-amber-600 dark:bg-amber-500" text="Stale cache" detail={`from ${retrieved}`} />
+    return <Pill dot="bg-amber-600 dark:bg-amber-500" text="Saved copy" detail={`saved ${retrieved}`} />
   }
   if (error) {
-    return <Pill dot="bg-red-500" text={`Error ${error.code}`} detail={retrieved} />
+    return <Pill dot="bg-red-500" text="FDA unavailable" detail={retrieved} />
   }
   if (!lastSynced) {
-    return <Pill dot="bg-zinc-500 dark:bg-zinc-400" text="Awaiting FDA data" detail="not yet retrieved" />
+    return <Pill dot="bg-zinc-500 dark:bg-zinc-400" text="Loading FDA records" detail="not yet loaded" />
   }
-  return <Pill dot="bg-emerald-600 dark:bg-emerald-500" text="Live FDA data" detail={`retrieved ${retrieved}`} />
+  return <Pill dot="bg-emerald-600 dark:bg-emerald-500" text="FDA records" detail={`loaded ${retrieved}`} />
 }
 
 interface PillProps {

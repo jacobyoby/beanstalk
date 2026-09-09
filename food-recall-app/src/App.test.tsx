@@ -108,7 +108,7 @@ describe('App responsive layout and data provenance', () => {
     render(<App />)
 
     await screen.findByText(record.productDescription)
-    const staleBanner = screen.getByText(/Stale cached data/)
+    const staleBanner = screen.getByText(/Showing a saved copy/)
     expect(staleBanner).toHaveTextContent(new Date(result.lastSynced!).toLocaleString())
     expect(staleBanner).not.toHaveTextContent(new Date(getLastSynced()!).toLocaleString())
     expect(screen.getByRole('button', { name: 'Retry' })).toBeVisible()
@@ -122,7 +122,7 @@ describe('App responsive layout and data provenance', () => {
     render(<App />)
 
     expect(screen.getByText('Demo data')).toBeVisible()
-    expect(screen.queryByText('Live FDA data')).not.toBeInTheDocument()
+    expect(screen.queryByText('FDA records')).not.toBeInTheDocument()
     expect(screen.getAllByText(/fictional/i).length).toBeGreaterThan(0)
 
     await act(async () => resolveFetch({ ...result, isDemo: true }))
@@ -133,6 +133,6 @@ describe('App responsive layout and data provenance', () => {
     const sourceLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href]'))
       .filter(link => /https:\/\/(api|www\.accessdata)\.fda\.gov\//.test(link.href))
     expect(sourceLinks).toHaveLength(0)
-    expect(screen.queryByText(/FDA enforcement archive/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/FDA archive/)).not.toBeInTheDocument()
   })
 })

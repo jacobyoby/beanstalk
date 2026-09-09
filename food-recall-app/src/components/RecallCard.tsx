@@ -76,11 +76,11 @@ export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary
 
       <dl className="recall-card-facts mt-auto space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
         <div className="flex gap-2">
-          <dt className="w-14 shrink-0 text-zinc-500 dark:text-zinc-400">Firm</dt>
+          <dt className="w-14 shrink-0 text-zinc-500 dark:text-zinc-400">Company</dt>
           <dd className="truncate">{firmLine || 'Not stated'}</dd>
         </div>
         <div className="flex gap-2">
-          <dt className="w-14 shrink-0 text-zinc-500 dark:text-zinc-400">Sold in</dt>
+          <dt className="w-14 shrink-0 text-zinc-500 dark:text-zinc-400">Area</dt>
           <dd className="truncate">{recall.distributionPattern || 'Not stated'}</dd>
         </div>
       </dl>
@@ -98,7 +98,7 @@ export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary
         </ul>
       )}
       {dietary.length > 0 && dietaryMatches.length === 0 && (
-        <p className="hint border-t border-zinc-100 pt-3 dark:border-zinc-800">No dietary match. Absence of a term does not mean allergen-free.</p>
+        <p className="hint border-t border-zinc-100 pt-3 dark:border-zinc-800">No matching dietary terms found. This does not mean the product is allergen-free.</p>
       )}
     </article>
   )
