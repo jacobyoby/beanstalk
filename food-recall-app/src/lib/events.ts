@@ -88,7 +88,33 @@ export function mapOpenFDAEvent(r: OpenFDAEventRecord): AdverseEvent | null {
 }
 
 /**
+ * Split a product description into lowercase tokens using Unicode letter
+ * sequences. Accented characters (ñ, é, ü, …) are kept intact.
+ *
+ * Tokens shorter than 2 characters are dropped — this catches stray
+ * punctuation artifacts without losing meaningful short words.
+ */
+export function tokenizeProductDescription(description: string): string[] {
+  if (!description) return [];
+
+  // \p{L}+ matches any run of Unicode letters (preserves ñ, é, ü, etc.)
+  const rawTokens = description.toLowerCase().match(/\p{L}+/gu) ?? [];
+
+  const seen = new Set<string>();
+  const tokens: string[] = [];
+  for (const t of rawTokens) {
+    if (t.length < 2) continue;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    tokens.push(t);
+  }
+
+  return tokens;
+}
+
+/**
  * Build search clause for adverse events across product brand, reactions, and outcomes.
+ * Used by the Early Signals tab (user-typed query as a single term).
  */
 export function buildEventSearchClause(search: string): string | null {
   const sanitized = sanitizeSearchQuery(search);
@@ -96,6 +122,28 @@ export function buildEventSearchClause(search: string): string | null {
   const fields = ["products.name_brand", "reactions", "outcomes"];
   const inner = fields.map((f) => `${f}:"${sanitized}"`).join(" OR ");
   return `(${inner})`;
+}
+
+/**
+ * Build a CAERS search clause that ORs individually-quoted tokens against
+ * `products.name_brand` (issue #91).
+ *
+ * Example for "Jalapeño Peppers Sinaloa Mexico":
+ *   products.name_brand:"jalapeño" OR products.name_brand:"peppers"
+ *   OR products.name_brand:"sinaloa" OR products.name_brand:"mexico"
+ *
+ * A single phrase query never matches real CAERS brand names. Accented
+ * characters are preserved. Returns null when no usable tokens exist.
+ */
+export function buildRelatedEventSearchClause(productDescription: string): string | null {
+  const tokens = tokenizeProductDescription(productDescription);
+  if (tokens.length === 0) return null;
+
+  // Cap at 8 tokens to keep the query manageable. Earlier tokens are usually
+  // the product name before generic qualifiers.
+  const capped = tokens.slice(0, 8);
+
+  return capped.map((t) => `products.name_brand:"${t}"`).join(" OR ");
 }
 
 export function buildEventSearchParam(search: string, predicates: string[] = []): string | null {
@@ -209,11 +257,13 @@ export async function fetchAdverseEvents(params?: {
   limit?: number;
   skip?: number;
   signal?: AbortSignal;
+  /** Raw openFDA search clause; skips phrase wrapping from buildEventSearchParam. */
+  searchOverride?: string;
 }): Promise<EventFetchResult> {
   const limit = params?.limit ?? 20;
   const skip = params?.skip ?? 0;
   const search = params?.search || "";
-  const searchParam = buildEventSearchParam(search);
+  const searchParam = params?.searchOverride ?? buildEventSearchParam(search);
   const cappedSkip = Math.min(skip, 25000);
   if (cappedSkip !== skip) {
     return {
@@ -231,7 +281,7 @@ export async function fetchAdverseEvents(params?: {
     };
   }
 
-  const cacheKey = `event|${sanitizeSearchQuery(search)}|${limit}|${cappedSkip}`;
+  const cacheKey = `event|${params?.searchOverride ? "or-tokens|" : ""}${sanitizeSearchQuery(search)}|${limit}|${cappedSkip}`;
   const cachedEntry = getCacheEntry(cacheKey);
   const cached = cachedEntry?.data ?? null;
   const demo = isDemoMode();
@@ -245,7 +295,17 @@ export async function fetchAdverseEvents(params?: {
         nameBrand: p.nameBrand.startsWith("DEMO ") ? p.nameBrand : `DEMO — Fictional — ${p.nameBrand}`,
       })),
     }));
-    if (search) filtered = filtered.filter((e) => matchesEventLocally(e, search));
+    if (search) {
+      if (params?.searchOverride) {
+        const tokens = tokenizeProductDescription(search);
+        filtered = filtered.filter((e) => {
+          const text = eventSearchText(e).toLowerCase();
+          return tokens.some((t) => text.includes(t));
+        });
+      } else {
+        filtered = filtered.filter((e) => matchesEventLocally(e, search));
+      }
+    }
     const total = filtered.length;
     const paged = filtered.slice(cappedSkip, cappedSkip + limit);
     return { events: paged, total, error: null, isStale: false, lastSynced: getEventLastSynced(), isDemo: true };
@@ -370,13 +430,8 @@ export async function fetchAdverseEvents(params?: {
 
 /** Convenience for related-events lookup from a recall product description. */
 export async function fetchRelatedEvents(productHint: string, signal?: AbortSignal): Promise<EventFetchResult> {
-  const terms = productHint
-    .replace(/[^a-zA-Z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter((t) => t.length > 3)
-    .slice(0, 4);
-  const search = terms.join(" ");
-  if (!search) {
+  const clause = buildRelatedEventSearchClause(productHint);
+  if (!clause) {
     return {
       events: [],
       total: 0,
@@ -386,5 +441,11 @@ export async function fetchRelatedEvents(productHint: string, signal?: AbortSign
       isDemo: isDemoMode(),
     };
   }
-  return fetchAdverseEvents({ search, limit: 6, skip: 0, signal });
+  return fetchAdverseEvents({
+    search: productHint,
+    searchOverride: clause,
+    limit: 6,
+    skip: 0,
+    signal,
+  });
 }

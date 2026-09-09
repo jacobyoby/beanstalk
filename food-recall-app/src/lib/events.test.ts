@@ -3,12 +3,14 @@ import { FDA_EVENT_DISCLAIMER } from "../types/event";
 import {
   buildEventSearchClause,
   buildEventSearchParam,
+  buildRelatedEventSearchClause,
   clearEventCache,
   eventSearchText,
   fetchAdverseEvents,
   fetchRelatedEvents,
   mapOpenFDAEvent,
   matchesEventLocally,
+  tokenizeProductDescription,
 } from "./events";
 
 describe("FDA_EVENT_DISCLAIMER", () => {
@@ -243,6 +245,90 @@ describe("fetchAdverseEvents", () => {
   });
 });
 
+describe("tokenizeProductDescription", () => {
+  it("splits on whitespace and punctuation, lowercases", () => {
+    expect(tokenizeProductDescription("Dark Chocolate Bar")).toEqual(["dark", "chocolate", "bar"]);
+  });
+
+  it("preserves accented characters (Jalapeño stays intact)", () => {
+    const tokens = tokenizeProductDescription("Jalapeño Peppers, Sinaloa Mexico");
+    expect(tokens).toContain("jalapeño");
+    expect(tokens).toContain("peppers");
+    expect(tokens).toContain("sinaloa");
+    expect(tokens).toContain("mexico");
+    expect(tokens).not.toContain("jalape");
+    expect(tokens).not.toContain("o");
+  });
+
+  it("preserves other Unicode letters (ü, é, ö)", () => {
+    const tokens = tokenizeProductDescription("Crème Brülee Mix");
+    expect(tokens).toContain("crème");
+    expect(tokens).toContain("brülee");
+    expect(tokens).toContain("mix");
+  });
+
+  it("drops single-character tokens", () => {
+    expect(tokenizeProductDescription("A B C Product")).toEqual(["product"]);
+  });
+
+  it("deduplicates tokens", () => {
+    expect(tokenizeProductDescription("Milk Milk Milk")).toEqual(["milk"]);
+  });
+
+  it("returns empty array for empty / punctuation-only input", () => {
+    expect(tokenizeProductDescription("")).toEqual([]);
+    expect(tokenizeProductDescription("---")).toEqual([]);
+  });
+});
+
+describe("buildRelatedEventSearchClause", () => {
+  it("builds OR of individually-quoted tokens (not a single phrase)", () => {
+    const clause = buildRelatedEventSearchClause("Jalapeño Peppers Sinaloa Mexico");
+    expect(clause).toBeTruthy();
+    if (!clause) return;
+    expect(clause).not.toMatch(/products\.name_brand:"[^"]*\s[^"]*"/);
+    expect(clause).toContain('products.name_brand:"jalapeño"');
+    expect(clause).toContain('products.name_brand:"peppers"');
+    expect(clause).toContain('products.name_brand:"sinaloa"');
+    expect(clause).toContain('products.name_brand:"mexico"');
+    expect((clause.match(/ OR /g) ?? []).length).toBe(3);
+  });
+
+  it("preserves accented characters in the clause", () => {
+    const clause = buildRelatedEventSearchClause("Jalapeño Peppers");
+    expect(clause).toBeTruthy();
+    if (!clause) return;
+    expect(clause).toContain("jalapeño");
+    expect(decodeURIComponent(encodeURIComponent(clause))).toContain("jalapeño");
+  });
+
+  it("returns null for empty or single-character-only input", () => {
+    expect(buildRelatedEventSearchClause("")).toBeNull();
+    expect(buildRelatedEventSearchClause("   ")).toBeNull();
+    expect(buildRelatedEventSearchClause("A B C")).toBeNull();
+  });
+
+  it("caps tokens at 8 to keep query manageable", () => {
+    const clause = buildRelatedEventSearchClause("one two three four five six seven eight nine ten eleven");
+    expect(clause).toBeTruthy();
+    if (!clause) return;
+    expect((clause.match(/ OR /g) ?? []).length).toBe(7);
+  });
+
+  it("emitted search= param decodes to token-level OR, not phrase", () => {
+    const clause = buildRelatedEventSearchClause("Frozen Beef Taquitos");
+    expect(clause).toBeTruthy();
+    if (!clause) return;
+    const url = `https://api.fda.gov/food/event.json?search=${encodeURIComponent(clause)}`;
+    const decoded = new URLSearchParams(url.split("?")[1]).get("search");
+    expect(decoded).toBeTruthy();
+    expect(decoded).toBe(
+      'products.name_brand:"frozen" OR products.name_brand:"beef" OR products.name_brand:"taquitos"',
+    );
+    expect(decoded).not.toContain('"frozen beef taquitos"');
+  });
+});
+
 describe("fetchRelatedEvents", () => {
   beforeEach(() => {
     clearEventCache();
@@ -255,12 +341,15 @@ describe("fetchRelatedEvents", () => {
   });
 
   it("returns empty when product hint has no useful tokens", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
     const res = await fetchRelatedEvents("a b c");
     expect(res.events).toEqual([]);
     expect(res.error).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it("searches using product tokens", async () => {
+  it("searches using token-level OR, not a phrase", async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       json: async () => ({
@@ -280,6 +369,60 @@ describe("fetchRelatedEvents", () => {
     expect(res.events).toHaveLength(1);
     const calledUrl = String(fetchMock.mock.calls[0][0]);
     expect(calledUrl).toContain("/food/event.json");
-    expect(calledUrl).toContain("search=");
+    const decoded = new URLSearchParams(calledUrl.split("?")[1]).get("search");
+    expect(decoded).toContain('products.name_brand:"jalapeño"');
+    expect(decoded).toContain('products.name_brand:"peppers"');
+    expect(decoded).toContain(" OR ");
+    expect(decoded).not.toMatch(/products\.name_brand:"[^"]*\s[^"]*"/);
+    expect(decoded).not.toContain('"Jalape Peppers Sinaloa Mexico"');
+  });
+
+  it("maps CAERS response fields", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          results: [
+            {
+              report_number: "CAERS-001",
+              date_created: "20260101",
+              date_started: "20251215",
+              consumer: { age: "45", gender: "Male" },
+              products: [{ name_brand: "Jalapeño Peppers", name: "peppers" }],
+              reactions: ["nausea", "vomiting"],
+              outcomes: [],
+            },
+          ],
+          meta: { results: { total: 1 } },
+        }),
+      }),
+    );
+    const events = (await fetchRelatedEvents("Jalapeño Peppers")).events;
+    expect(events).toHaveLength(1);
+    expect(events[0].reportNumber).toBe("CAERS-001");
+    expect(events[0].products[0].nameBrand).toBe("Jalapeño Peppers");
+    expect(events[0].reactions).toEqual(["nausea", "vomiting"]);
+  });
+
+  it("returns empty on 404 (no matches)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        status: 404,
+        json: async () => ({ error: { code: "NOT_FOUND", message: "No matches found!" } }),
+      }),
+    );
+    const res = await fetchRelatedEvents("NonexistentProduct");
+    expect(res.events).toEqual([]);
+    expect(res.error).toBeNull();
+  });
+
+  it("returns empty events on network error", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Network")));
+    const res = await fetchRelatedEvents("Some Product");
+    expect(res.events).toEqual([]);
+    expect(res.error?.code).toBe("NETWORK");
   });
 });
