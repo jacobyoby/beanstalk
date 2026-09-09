@@ -491,9 +491,7 @@ export default function App() {
               </div>
               <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
                 <p className="text-sm text-zinc-700 dark:text-zinc-300" role="status" aria-live="polite">
-                  {loading
-                    ? "Loading recalls…"
-                    : `${total.toLocaleString()} ${total === 1 ? "recall" : "recalls"}`}
+                  {loading ? "Loading recalls…" : `${total.toLocaleString()} ${total === 1 ? "recall" : "recalls"}`}
                   {!loading && isStale && " · stale"}
                 </p>
                 {!loading && recalls.length > 0 && (
@@ -715,8 +713,8 @@ export default function App() {
               <p>
                 Search notes: no matches return openFDA 404 (shown as empty). Recall paging uses{" "}
                 <code className="text-[11px]">skip</code> through 25,000, then openFDA{" "}
-                <code className="text-[11px]">search_after</code> (Link cursor). Status is as published by openFDA, not a
-                live lifecycle. Related events match any product token (parenthesized OR). Watchlist terms also match
+                <code className="text-[11px]">search_after</code> (Link cursor). Status is as published by openFDA, not
+                a live lifecycle. Related events match any product token (parenthesized OR). Watchlist terms also match
                 adverse event product brands, reactions, and outcomes.
               </p>
               <p>
