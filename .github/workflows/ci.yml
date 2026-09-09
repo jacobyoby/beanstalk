@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 10
     defaults: { run: { working-directory: food-recall-app } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
       - run: npm ci
@@ -27,7 +27,7 @@ jobs:
     timeout-minutes: 10
     defaults: { run: { working-directory: food-recall-app } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
       - run: npm ci
@@ -38,7 +38,7 @@ jobs:
     timeout-minutes: 10
     defaults: { run: { working-directory: food-recall-app } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
       - run: npm ci
@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
       - run: "npx knip --reporter symbols || echo 'knip: no unused exports found or knip not installed'"
@@ -58,7 +58,7 @@ jobs:
     timeout-minutes: 10
     defaults: { run: { working-directory: food-recall-app } }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
       - run: npm ci

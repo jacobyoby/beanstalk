@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 15
     if: github.event_name == 'pull_request' || contains(github.event.label.name, 'retry-adversarial')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
       - name: Extract PR claims
         run: |
@@ -39,7 +39,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
@@ -53,7 +53,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
       - name: Secret scan
         run: |
@@ -69,7 +69,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
@@ -85,7 +85,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
