@@ -2,6 +2,30 @@ interface Props {
   className?: string;
 }
 
+/** Leaves that grow from the lowercase b. Ported from PR #63 header wordmark. */
+export function WordmarkLeaves({ className }: Props) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 48 48"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.1"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M12 44c0-12 7-21 15-28" />
+      <path
+        d="M17 30C7 31 2 24 3 17c9-1 17 5 14 13ZM22 23C20 13 29 5 39 6c0 10-8 19-17 17Z"
+        fill="currentColor"
+        fillOpacity=".13"
+      />
+    </svg>
+  );
+}
+
 export default function BeanstalkMark({ className }: Props) {
   return (
     <svg

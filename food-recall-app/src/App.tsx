@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import BeanstalkMark from "./components/BeanstalkMark";
+import BeanstalkMark, { WordmarkLeaves } from "./components/BeanstalkMark";
 import EventCard from "./components/EventCard";
 import EventDetail from "./components/EventDetail";
 import FilterPanel from "./components/FilterPanel";
@@ -268,10 +268,11 @@ export default function App() {
               className="flex max-w-full flex-wrap items-center gap-3"
               aria-label="beanstalk FDA food recall explorer"
             >
+              <BeanstalkMark className="h-10 w-10 shrink-0 text-zinc-700 dark:text-zinc-200" />
               <span className="brand-name">
                 <span className="sprouting-b">
                   b
-                  <BeanstalkMark className="wordmark-leaves" />
+                  <WordmarkLeaves className="wordmark-leaves" />
                 </span>
                 eanstalk
               </span>
@@ -350,7 +351,7 @@ export default function App() {
               aria-selected={tab === "recalls"}
               aria-controls="panel-recalls"
               onClick={() => setTab("recalls")}
-              className={`px-4 py-2 text-sm rounded-md min-h-[44px] focus:outline-hidden focus:ring-2 focus:ring-amber-600 ${
+              className={`px-4 py-2 text-sm rounded-md min-h-[44px] focus:outline-hidden focus:ring-2 focus:ring-emerald-600 ${
                 tab === "recalls"
                   ? "bg-paper dark:bg-zinc-700 font-semibold text-zinc-900 dark:text-zinc-100 shadow-xs"
                   : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"

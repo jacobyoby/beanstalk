@@ -219,6 +219,15 @@ describe("App search and pagination", () => {
     await waitFor(() => expect(screen.getByRole("heading", { name: /beanstalk/i })).toBeInTheDocument());
   });
 
+  it("renders BeanstalkMark and sprouting lowercase wordmark in the header", async () => {
+    render(<App />);
+    const heading = await screen.findByRole("heading", { name: /beanstalk fda food recall explorer/i });
+    expect(heading.querySelectorAll("svg").length).toBeGreaterThanOrEqual(2);
+    expect(heading.textContent).toMatch(/beanstalk/i);
+    expect(heading.querySelector(".sprouting-b")).toBeTruthy();
+    expect(heading.querySelector(".wordmark-leaves")).toBeTruthy();
+  });
+
   it("debounces search input — fetchRecalls not called immediately on typing", async () => {
     render(<App />);
     await waitFor(() => expect(screen.getByPlaceholderText(/Product, reason, firm/)).toBeInTheDocument());

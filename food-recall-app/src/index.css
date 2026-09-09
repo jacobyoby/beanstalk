@@ -21,6 +21,10 @@
   --font-display: Georgia, Cambria, "Times New Roman", serif;
 }
 
+:root {
+  --beanstalk-leaf: #3d503d;
+}
+
 /* v3 defaults that would otherwise change uncolored borders / buttons / placeholders. */
 @layer base {
   *,
