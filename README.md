@@ -69,4 +69,4 @@ This project is not medical advice. For meat, poultry, or processed egg products
 
 ## Support
 
-[Support JACOBRAKAI FOUNDATION](https://donate.stripe.com/eVq4gy97DanS9h60phfrW00), a 501(c)(3) public charity.
+[Support JACOBRAKAI FOUNDATION](https://donate.stripe.com/eVq4gy97DanS9h60phfrW00), a 501(c)(3) public charity (legal name JACOBRAKAI FOUNDATION; EIN 33-3382083).
