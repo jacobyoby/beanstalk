@@ -12,10 +12,9 @@ interface Props {
 }
 
 function badge(c: string) {
-  if (c === "Class I") return "bg-red-600 text-white";
-  if (c === "Class II")
-    return "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-700";
-  return "bg-zinc-500 text-white";
+  if (c === "Class I") return "chip bg-red-700 text-white ring-red-700";
+  if (c === "Class II") return "chip chip-info";
+  return "chip chip-neutral";
 }
 
 export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary = [] }: Props) {
@@ -38,55 +37,37 @@ export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary
         }
       }}
       aria-label={`View recall ${recall.recallNumber}: ${recall.productDescription}`}
-      className={`bg-white dark:bg-zinc-800 border rounded-xl p-4 hover:shadow-md cursor-pointer transition flex flex-col gap-2 focus:outline-hidden focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 ${
-        isNew ? "border-blue-400 dark:border-blue-500 ring-1 ring-blue-200 dark:ring-blue-800" : "dark:border-zinc-700"
+      className={`panel recall-card cursor-pointer p-4 sm:p-5 flex flex-col gap-2 focus:outline-hidden focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 ${
+        isNew ? "border-sky-400 dark:border-sky-600 ring-1 ring-sky-200 dark:ring-sky-800" : ""
       }`}
     >
-      <div className="flex gap-2 flex-wrap">
-        <span className={`text-xs px-2 py-1 rounded-full ${badge(recall.classification)}`}>
-          {recall.classification}
-        </span>
-        <span className="text-xs px-2 py-1 rounded-full bg-zinc-100 dark:bg-zinc-700 dark:text-zinc-200 border dark:border-zinc-600">
+      <div className="flex gap-1.5 flex-wrap">
+        <span className={badge(recall.classification)}>{recall.classification}</span>
+        <span className={recall.status.toLowerCase() === "ongoing" ? "chip chip-info" : "chip chip-neutral"}>
           {recall.status}
         </span>
-        {recall.state && (
-          <span className="text-xs px-2 py-1 rounded-full bg-zinc-100 dark:bg-zinc-700 dark:text-zinc-200 border dark:border-zinc-600">
-            {recall.state}
-          </span>
-        )}
-        {isNew && (
-          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 font-medium">
-            NEW
-          </span>
-        )}
-        {isWatched && (
-          <span className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 font-medium">
-            Watching
-          </span>
-        )}
+        {recall.state && <span className="chip chip-neutral">{recall.state}</span>}
+        {isNew && <span className="chip chip-info">NEW</span>}
+        {isWatched && <span className="chip chip-personal">Watching</span>}
       </div>
       <h3 className="font-semibold text-sm leading-tight line-clamp-2 dark:text-zinc-100">
         {recall.productDescription}
       </h3>
       <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2">{recall.reasonForRecall}</p>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-400">
+      <p className="recall-card-facts text-xs text-zinc-500 dark:text-zinc-400">
         {recall.recallingFirm} • {formatRecallDate(recall.recallInitiationDate)}
       </p>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-400 truncate">
-        Dist: {recall.distributionPattern}
-      </p>
+      <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">Dist: {recall.distributionPattern}</p>
       {isWatched && matchedTerms.length > 0 && (
-        <p className="text-xs text-amber-700 dark:text-amber-400">Watch: {matchedTerms.join(", ")}</p>
+        <p className="text-xs text-indigo-800 dark:text-indigo-300">Watch: {matchedTerms.join(", ")}</p>
       )}
       {dietaryMatches.length > 0 && (
-        <p className="text-xs text-emerald-700 dark:text-emerald-400">
+        <p className="text-xs text-emerald-800 dark:text-emerald-300">
           Dietary: {dietaryMatches.map((m) => `${m.concern} via ${m.field} (“${m.term}”)`).join(", ")}
         </p>
       )}
       {dietary.length > 0 && dietaryMatches.length === 0 && (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">
-          No dietary match — absence does not mean allergen-free
-        </p>
+        <p className="hint">No dietary match — absence does not mean allergen-free</p>
       )}
     </article>
   );

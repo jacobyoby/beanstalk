@@ -2,23 +2,28 @@ import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
 
+const pagesBase = "/beanstalk/";
+
 export default defineConfig({
+  base: pagesBase,
   plugins: [
     react(),
     VitePWA({
       registerType: "autoUpdate",
       manifest: {
         name: "Beanstalk — Food Recall Tracker",
-        short_name: "Beanstalk",
+        short_name: "beanstalk",
         description: "Track FDA food recalls and allergen alerts for your dietary needs",
-        theme_color: "#fafafa",
-        background_color: "#fafafa",
+        start_url: pagesBase,
+        scope: pagesBase,
+        theme_color: "#1d4535",
+        background_color: "#f8f6ee",
         display: "standalone",
         icons: [
-          { src: "/icon-192.svg", sizes: "192x192", type: "image/svg+xml" },
-          { src: "/icon-512.svg", sizes: "512x512", type: "image/svg+xml" },
-          { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
-          { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+          { src: "icon-192.svg", sizes: "192x192", type: "image/svg+xml" },
+          { src: "icon-512.svg", sizes: "512x512", type: "image/svg+xml" },
+          { src: "icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "icon-512.png", sizes: "512x512", type: "image/png" },
         ],
       },
       workbox: { globPatterns: ["**/*.{js,css,html,svg,png,ico}"] },

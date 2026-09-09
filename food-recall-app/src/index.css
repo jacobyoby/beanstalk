@@ -3,11 +3,26 @@
 /* Preserve v3 class-based dark mode (html.dark / .dark ancestor). */
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Cream paper + forest zinc from botanical refresh (PR #63), expressed as Tailwind v4 tokens. */
 @theme {
-  --color-brand-50: #fef2f2;
-  --color-brand-500: #dc2626;
-  --color-brand-600: #b91c1c;
-  --color-brand-900: #7f1d1d;
+  --color-paper: #fffdf7;
+  --color-zinc-50: #f8f6ee;
+  --color-zinc-100: #efeee4;
+  --color-zinc-200: #dedfd2;
+  --color-zinc-300: #c5ccbd;
+  --color-zinc-400: #a0ad9a;
+  --color-zinc-500: #667260;
+  --color-zinc-600: #53614e;
+  --color-zinc-700: #3d503d;
+  --color-zinc-800: #293c2e;
+  --color-zinc-900: #1b2d23;
+  --color-zinc-950: #111e17;
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: Georgia, Cambria, "Times New Roman", serif;
+}
+
+:root {
+  --beanstalk-leaf: #3d503d;
 }
 
 /* v3 defaults that would otherwise change uncolored borders / buttons / placeholders. */
@@ -37,7 +52,151 @@ html {
 html.dark {
   color-scheme: dark;
 }
-html.dark body {
-  background-color: #18181b;
-  color: #e4e4e7;
+
+body {
+  @apply bg-zinc-50 text-zinc-900 antialiased;
+  background-image: radial-gradient(#53614e14 0.7px, transparent 0.7px);
+  background-size: 12px 12px;
+}
+.dark body {
+  @apply bg-zinc-950 text-zinc-100;
+  background-image: radial-gradient(#c5ccbd0b 0.7px, transparent 0.7px);
+}
+
+@layer components {
+  .panel {
+    @apply rounded-2xl border border-zinc-200 bg-paper dark:border-zinc-800 dark:bg-zinc-900;
+    box-shadow:
+      0 3px 0 #293c2e06,
+      0 6px 16px #293c2e03;
+  }
+  .label {
+    @apply block text-xs font-semibold tracking-wide text-zinc-500 uppercase dark:text-zinc-400;
+  }
+  .input {
+    @apply w-full min-h-[44px] rounded-xl border border-zinc-500 bg-paper px-3 py-2 text-base text-zinc-900 shadow-xs placeholder:text-zinc-500 focus:border-emerald-600 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden dark:border-zinc-500 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-400;
+  }
+  .btn {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full border border-zinc-500 bg-paper px-4 py-2 text-sm font-medium text-zinc-800 shadow-xs transition hover:bg-zinc-100 focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 focus:outline-hidden disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-400 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800 dark:focus:ring-offset-zinc-950;
+  }
+  .btn-primary {
+    @apply border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800 dark:border-emerald-600 dark:bg-emerald-700 dark:text-white dark:hover:bg-emerald-800;
+  }
+  .btn-quiet {
+    @apply border-transparent bg-transparent shadow-none hover:bg-zinc-100 dark:border-transparent dark:bg-transparent dark:hover:bg-zinc-800;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset;
+  }
+  .chip-neutral {
+    @apply bg-zinc-50 text-zinc-700 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700;
+  }
+  .chip-info {
+    @apply bg-sky-50 text-sky-800 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800;
+  }
+  .chip-personal {
+    @apply bg-indigo-50 text-indigo-800 ring-indigo-200 dark:bg-indigo-950 dark:text-indigo-200 dark:ring-indigo-800;
+  }
+  .hint {
+    @apply text-xs leading-relaxed text-zinc-500 dark:text-zinc-400;
+  }
+  .site-header {
+    @apply border-b border-zinc-200 bg-paper dark:border-zinc-800 dark:bg-zinc-900;
+    border-top: 4px solid #3d503d;
+  }
+  .brand-name {
+    @apply font-display block pt-3 text-[2rem] leading-none tracking-[-0.055em] text-zinc-800 dark:text-zinc-100;
+  }
+  .sprouting-b {
+    position: relative;
+    display: inline-block;
+  }
+  .wordmark-leaves {
+    position: absolute;
+    width: 0.85em;
+    height: 0.85em;
+    left: -0.08em;
+    top: -0.5em;
+    pointer-events: none;
+  }
+  .garden-intro {
+    @apply mb-6 flex items-center justify-between gap-4 border-b border-dashed border-zinc-300 pb-5 dark:border-zinc-700;
+  }
+  .garden-intro h2 {
+    @apply font-display text-[1.625rem] leading-tight tracking-tight text-zinc-800 sm:text-[2rem] dark:text-zinc-100;
+  }
+  .pantry-sketch {
+    @apply hidden h-16 w-28 shrink-0 text-zinc-600 sm:block dark:text-zinc-400;
+  }
+  .search-shell .input {
+    @apply min-h-[48px] rounded-2xl;
+  }
+  .search-icon {
+    color: #53614e;
+  }
+  .dark .search-icon {
+    color: #a0ad9a;
+  }
+  .recall-card {
+    transition:
+      transform 180ms ease,
+      box-shadow 180ms ease,
+      border-color 180ms ease;
+  }
+  .recall-card-facts {
+    @apply border-t border-dashed border-zinc-200 pt-3 dark:border-zinc-700;
+  }
+  .recall-card-open {
+    @apply text-zinc-500 dark:text-zinc-400;
+    transition: transform 180ms ease;
+  }
+  .recall-card:focus-within .recall-card-open {
+    transform: translate(2px, -2px);
+  }
+  summary:focus-visible {
+    outline: 2px solid #059669;
+    outline-offset: 3px;
+    border-radius: 0.75rem;
+  }
+  input[type="checkbox"] {
+    accent-color: #3d503d;
+  }
+  .dark input[type="checkbox"] {
+    accent-color: #a0c3a3;
+  }
+  .site-footer {
+    @apply bg-paper dark:bg-zinc-900;
+  }
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .recall-card:hover {
+    transform: translateY(-2px);
+  }
+  .recall-card:hover .recall-card-open {
+    transform: translate(2px, -2px);
+  }
+}
+
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.animate-slide-in {
+  animation: slide-in-right 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    /* biome-ignore lint/complexity/noImportantStyles: honor reduced-motion over component transitions */
+    animation-duration: 0.01ms !important;
+    /* biome-ignore lint/complexity/noImportantStyles: honor reduced-motion over component transitions */
+    transition-duration: 0.01ms !important;
+  }
 }

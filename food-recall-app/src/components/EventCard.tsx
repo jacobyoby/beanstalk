@@ -34,34 +34,18 @@ export default function EventCard({ event, onSelect, isNew, watchlist }: Props) 
         }
       }}
       aria-label={`View adverse event report ${event.reportNumber}: ${brandNames}`}
-      className={`bg-white dark:bg-zinc-800 border rounded-xl p-4 hover:shadow-md cursor-pointer transition flex flex-col gap-2 focus:outline-hidden focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 ${
-        isNew
-          ? "border-violet-400 dark:border-violet-500 ring-1 ring-violet-200 dark:ring-violet-800"
-          : "dark:border-zinc-700"
+      className={`panel recall-card cursor-pointer p-4 sm:p-5 flex flex-col gap-2 focus:outline-hidden focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 ${
+        isNew ? "border-violet-400 dark:border-violet-600 ring-1 ring-violet-200 dark:ring-violet-800" : ""
       }`}
     >
-      <div className="flex gap-2 flex-wrap">
-        <span className="text-xs px-2 py-1 rounded-full bg-violet-100 dark:bg-violet-900 text-violet-800 dark:text-violet-200 border border-violet-200 dark:border-violet-700 font-medium">
+      <div className="flex gap-1.5 flex-wrap">
+        <span className="chip bg-violet-100 text-violet-800 ring-violet-200 dark:bg-violet-950 dark:text-violet-200 dark:ring-violet-800">
           Early signal
         </span>
-        <span className="text-xs px-2 py-1 rounded-full bg-zinc-100 dark:bg-zinc-700 dark:text-zinc-200 border dark:border-zinc-600">
-          Unverified
-        </span>
-        {event.consumer.gender && (
-          <span className="text-xs px-2 py-1 rounded-full bg-zinc-100 dark:bg-zinc-700 dark:text-zinc-200 border dark:border-zinc-600">
-            {event.consumer.gender}
-          </span>
-        )}
-        {isNew && (
-          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 font-medium">
-            NEW
-          </span>
-        )}
-        {isWatched && (
-          <span className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 font-medium">
-            Watching
-          </span>
-        )}
+        <span className="chip chip-neutral">Unverified</span>
+        {event.consumer.gender && <span className="chip chip-neutral">{event.consumer.gender}</span>}
+        {isNew && <span className="chip chip-info">NEW</span>}
+        {isWatched && <span className="chip chip-personal">Watching</span>}
       </div>
       <h3 className="font-semibold text-sm leading-tight line-clamp-2 dark:text-zinc-100">{brandNames}</h3>
       {topReactions.length > 0 && (
@@ -80,7 +64,7 @@ export default function EventCard({ event, onSelect, isNew, watchlist }: Props) 
         Report {event.reportNumber || "—"} • {formatRecallDate(event.dateStarted)}
       </p>
       {isWatched && matchedTerms.length > 0 && (
-        <p className="text-xs text-amber-700 dark:text-amber-400">Watch: {matchedTerms.join(", ")}</p>
+        <p className="text-xs text-indigo-800 dark:text-indigo-300">Watch: {matchedTerms.join(", ")}</p>
       )}
       <p className="text-[10px] leading-snug text-violet-800 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/40 border border-violet-100 dark:border-violet-900 rounded px-2 py-1">
         {FDA_EVENT_DISCLAIMER}
