@@ -1,6 +1,35 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Preserve v3 class-based dark mode (html.dark / .dark ancestor). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-brand-50: #fef2f2;
+  --color-brand-500: #dc2626;
+  --color-brand-600: #b91c1c;
+  --color-brand-900: #7f1d1d;
+}
+
+/* v3 defaults that would otherwise change uncolored borders / buttons / placeholders. */
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--color-gray-400);
+  }
+}
 
 html {
   color-scheme: light;

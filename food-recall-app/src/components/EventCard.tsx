@@ -34,7 +34,7 @@ export default function EventCard({ event, onSelect, isNew, watchlist }: Props) 
         }
       }}
       aria-label={`View adverse event report ${event.reportNumber}: ${brandNames}`}
-      className={`bg-white dark:bg-zinc-800 border rounded-xl p-4 hover:shadow-md cursor-pointer transition flex flex-col gap-2 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 ${
+      className={`bg-white dark:bg-zinc-800 border rounded-xl p-4 hover:shadow-md cursor-pointer transition flex flex-col gap-2 focus:outline-hidden focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 ${
         isNew
           ? "border-violet-400 dark:border-violet-500 ring-1 ring-violet-200 dark:ring-violet-800"
           : "dark:border-zinc-700"
