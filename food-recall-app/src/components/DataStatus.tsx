@@ -37,7 +37,7 @@ interface PillProps {
 
 function Pill({ dot, text, detail }: PillProps) {
   return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300" role="status" title={`${text} — ${detail}`}>
+    <span className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-paper px-3 py-1 text-xs text-zinc-700 shadow-sm dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-300" role="status" title={`${text} — ${detail}`}>
       <span className={`h-2 w-2 shrink-0 rounded-full ${dot}`} aria-hidden="true" />
       <span className="font-medium">{text}</span>
       <span className="sr-only text-zinc-500 sm:not-sr-only dark:text-zinc-400">{detail}</span>

@@ -37,7 +37,7 @@ export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary
 
   return (
     <article
-      className={`panel relative flex flex-col gap-3 p-4 transition hover:border-zinc-300 hover:shadow-md has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-emerald-600 has-[:focus-visible]:ring-offset-2 dark:hover:border-zinc-700 dark:has-[:focus-visible]:ring-offset-zinc-950 sm:p-5 ${
+      className={`panel recall-card relative flex flex-col gap-3 p-4 transition hover:border-zinc-300 hover:shadow-md has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-emerald-600 has-[:focus-visible]:ring-offset-2 dark:hover:border-zinc-700 dark:has-[:focus-visible]:ring-offset-zinc-950 sm:p-5 ${
         highRisk ? 'border-l-4 border-l-red-700 dark:border-l-red-600' : ''
       }`}
     >
@@ -58,20 +58,23 @@ export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary
         {category && (
           <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{category}</p>
         )}
-        <h3 className="text-base font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
+        <h3 className="recall-card-heading text-base font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
           <button
             type="button"
             onClick={() => onSelect(recall)}
             aria-label={`View recall ${recall.recallNumber}: ${recall.productDescription}`}
-            className="block w-full cursor-pointer text-left focus:outline-none after:absolute after:inset-0 after:content-['']"
+            className="flex w-full cursor-pointer items-start gap-2 text-left focus:outline-none after:absolute after:inset-0 after:content-['']"
           >
-            <span className="line-clamp-2">{recall.productDescription}</span>
+            <span className="line-clamp-2 min-w-0 flex-1">{recall.productDescription}</span>
+            <svg className="recall-card-open pointer-events-none mt-0.5 h-4 w-4 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
+              <path d="M2.5 12.5c5 0 4-6 10.5-6.5M8.5 3.5 13 6l-1.5 5" />
+            </svg>
           </button>
         </h3>
         <p className="line-clamp-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{recall.reasonForRecall}</p>
       </div>
 
-      <dl className="mt-auto space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+      <dl className="recall-card-facts mt-auto space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
         <div className="flex gap-2">
           <dt className="w-14 shrink-0 text-zinc-500 dark:text-zinc-400">Firm</dt>
           <dd className="truncate">{firmLine || 'Not stated'}</dd>

@@ -7,8 +7,8 @@ export default function SearchBar({ value, onChange }: Props) {
   return (
     <div>
       <label htmlFor="search-input" className="label mb-1">Search</label>
-      <div className="relative">
-        <svg className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+      <div className="search-shell relative">
+        <svg className="search-icon pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true" focusable="false">
           <circle cx="9" cy="9" r="6" />
           <path d="M14 14l4 4" strokeLinecap="round" />
         </svg>

@@ -17,13 +17,13 @@ export default defineConfig(({ mode }) => {
       VitePWA({
         registerType: 'autoUpdate',
         manifest: {
-          name: demo ? 'Beanstalk Demo' : 'Beanstalk',
-          short_name: 'Beanstalk',
+          name: demo ? 'beanstalk demo' : 'beanstalk',
+          short_name: 'beanstalk',
           description: demo ? 'Interactive food recall explorer with fictional sample records' : 'Explore FDA food recall records',
           start_url: base,
           scope: base,
           theme_color: '#1d4535',
-          background_color: '#fafafa',
+          background_color: '#f8f6ee',
           display: 'standalone',
           icons: [
             { src: 'icon-192.svg', sizes: '192x192', type: 'image/svg+xml' },

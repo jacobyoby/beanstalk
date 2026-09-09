@@ -10,6 +10,8 @@ import FilterPanel, { countActiveFilters } from './components/FilterPanel'
 import WatchlistPanel from './components/WatchlistPanel'
 import DataStatus from './components/DataStatus'
 import SkeletonGrid from './components/SkeletonGrid'
+import BeanstalkMark from './components/BeanstalkMark'
+import PantrySketch from './components/PantrySketch'
 import { isNewRecall } from './lib/formatDate'
 import { useWatchlist } from './hooks/useWatchlist'
 import { useDarkMode } from './hooks/useDarkMode'
@@ -150,11 +152,13 @@ export default function App() {
     <div className="flex min-h-screen flex-col">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-emerald-700 focus:px-4 focus:py-2 focus:text-white">Skip to content</a>
 
-      <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
-          <h1 className="flex items-baseline gap-3">
-            <span className="text-xl font-bold tracking-tight text-emerald-800 dark:text-emerald-300">Beanstalk</span>
-            <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400">FDA food recall explorer</span>
+      <header className="site-header">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-4 sm:px-6">
+          <h1 className="flex max-w-full flex-wrap items-center gap-3">
+            <span className="flex flex-col gap-1">
+              <span className="brand-name"><span className="sprouting-b">b<svg className="wordmark-leaves" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2.1" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M12 44c0-12 7-21 15-28" /><path d="M17 30C7 31 2 24 3 17c9-1 17 5 14 13ZM22 23C20 13 29 5 39 6c0 10-8 19-17 17Z" fill="currentColor" fillOpacity=".13" /></svg></span>eanstalk</span>
+              <span className="text-xs font-normal tracking-wide text-zinc-500 dark:text-zinc-400">FDA food recall explorer</span>
+            </span>
           </h1>
           <div className="flex items-center gap-2">
             <DataStatus isDemo={isDemo} isStale={isStale} error={error} lastSynced={lastSynced} />
@@ -165,6 +169,9 @@ export default function App() {
               aria-pressed={dark}
               aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
             >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden="true" focusable="false">
+                {dark ? <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></> : <path d="M20 15.5A8.5 8.5 0 0 1 8.5 4a8.5 8.5 0 1 0 11.5 11.5Z" />}
+              </svg>
               {dark ? 'Light' : 'Dark'}
             </button>
           </div>
@@ -184,6 +191,13 @@ export default function App() {
       </header>
 
       <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+        <div className="garden-intro">
+          <div>
+            <h2>A little clarity for your pantry.</h2>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Look up a product. Explore the details.</p>
+          </div>
+          <PantrySketch />
+        </div>
         <div className="grid gap-6 lg:grid-cols-[288px_minmax(0,1fr)]">
           <aside aria-label="Search and filters" className="space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
             <SearchBar value={query} onChange={setQuery} />
@@ -226,6 +240,7 @@ export default function App() {
 
             {showEmpty && (
               <div className="panel px-6 py-12 text-center" role="status">
+                <BeanstalkMark className="mx-auto mb-4 h-16 w-16 text-zinc-500 dark:text-zinc-400" />
                 <p className="font-medium text-zinc-900 dark:text-zinc-50">No recalls match</p>
                 <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Try fewer filters or a broader search term.</p>
                 {(activeFilters > 0 || query) && <button type="button" onClick={clearAll} className="btn mt-4">Clear filters</button>}
@@ -258,7 +273,7 @@ export default function App() {
 
       {selected && <RecallDetail recall={selected} isDemo={isDemo} onClose={() => setSelected(null)} />}
 
-      <footer className="border-t border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+      <footer className="site-footer border-t border-zinc-200 dark:border-zinc-800">
         <div className="mx-auto max-w-7xl space-y-3 px-4 py-6 text-sm text-zinc-600 sm:px-6 dark:text-zinc-400">
           {!isDemo && <details>
             <summary className="cursor-pointer font-medium text-zinc-800 dark:text-zinc-200">About this data</summary>

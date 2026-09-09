@@ -102,7 +102,7 @@ export default function RecallDetail({ recall, isDemo = false, onClose }: Props)
   return (
     <div className="fixed inset-0 z-50 flex justify-end" role="dialog" aria-modal="true" aria-labelledby="recall-title">
       <div className="absolute inset-0 bg-zinc-900/50" onClick={onClose} aria-hidden="true" />
-      <div className="animate-slide-in relative flex h-full w-full max-w-xl flex-col bg-white shadow-2xl dark:bg-zinc-900">
+      <div className="animate-slide-in relative flex h-full w-full max-w-xl flex-col bg-paper shadow-2xl dark:bg-zinc-900">
         <header className="flex items-start justify-between gap-4 border-b border-zinc-200 px-5 py-4 dark:border-zinc-800">
           <div className="min-w-0 space-y-2">
             <div className="flex flex-wrap items-center gap-1.5">
