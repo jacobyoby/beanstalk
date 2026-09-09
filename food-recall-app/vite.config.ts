@@ -34,7 +34,7 @@ export default defineConfig({
         configure: (proxy) => {
           proxy.on("proxyReq", (proxyReq, req) => {
             const url = new URL(req.url || "", "https://api.fda.gov");
-            const apiKey = process.env.OPENFDA_API_KEY;
+            const apiKey = process.env.OPENFDA_API_KEY || process.env.VITE_OPENFDA_KEY;
             if (apiKey && !url.searchParams.has("api_key")) {
               const separator = url.search ? "&" : "?";
               proxyReq.path += `${separator}api_key=${apiKey}`;
