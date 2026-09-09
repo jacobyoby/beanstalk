@@ -1,37 +1,37 @@
-const STORAGE_KEY = 'ponder_watchlist'
+const STORAGE_KEY = "ponder_watchlist";
 
 export function getWatchlist(): string[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (!raw) return []
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) return []
-    return parsed.filter((x: unknown): x is string => typeof x === 'string')
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((x: unknown): x is string => typeof x === "string");
   } catch {
-    return []
+    return [];
   }
 }
 
 export function saveWatchlist(items: string[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 
 export function addToWatchlist(term: string): string[] {
-  const items = getWatchlist()
-  const normalized = term.trim().toLowerCase()
-  if (!normalized || items.includes(normalized)) return items
-  const updated = [...items, normalized]
-  saveWatchlist(updated)
-  return updated
+  const items = getWatchlist();
+  const normalized = term.trim().toLowerCase();
+  if (!normalized || items.includes(normalized)) return items;
+  const updated = [...items, normalized];
+  saveWatchlist(updated);
+  return updated;
 }
 
 export function removeFromWatchlist(term: string): string[] {
-  const items = getWatchlist().filter(t => t !== term.toLowerCase())
-  saveWatchlist(items)
-  return items
+  const items = getWatchlist().filter((t) => t !== term.toLowerCase());
+  saveWatchlist(items);
+  return items;
 }
 
 export function matchesWatchlist(text: string, watchlist: string[]): string[] {
-  const lower = text.toLowerCase()
-  return watchlist.filter(term => lower.includes(term))
+  const lower = text.toLowerCase();
+  return watchlist.filter((term) => lower.includes(term));
 }
