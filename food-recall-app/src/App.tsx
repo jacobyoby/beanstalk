@@ -163,10 +163,8 @@ export default function App() {
         if (newRecalls.length > 0 && !firstLoadRef.current && !stale && !demo && !err) {
           const watched = newRecalls.filter(
             (r) =>
-              matchesWatchlist(
-                `${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`,
-                watchlistRef.current,
-              ).length > 0,
+              matchesWatchlist(`${r.productDescription} ${r.reasonForRecall} ${r.recallingFirm}`, watchlistRef.current)
+                .length > 0,
           );
           if (watched.length > 0 && notificationsEnabledRef.current) {
             sendNotification(
@@ -219,7 +217,9 @@ export default function App() {
         setEventLoading(false);
         const newEvents = data.filter((e) => !eventSeenIdsRef.current.has(e.id));
         if (newEvents.length > 0 && !eventFirstLoadRef.current && !stale && !demo && !err) {
-          const watched = newEvents.filter((e) => matchesWatchlist(eventSearchText(e), watchlistRef.current).length > 0);
+          const watched = newEvents.filter(
+            (e) => matchesWatchlist(eventSearchText(e), watchlistRef.current).length > 0,
+          );
           if (watched.length > 0 && notificationsEnabledRef.current) {
             sendNotification(
               `${watched.length} newly observed adverse event report${watched.length > 1 ? "s" : ""} matching watchlist`,
