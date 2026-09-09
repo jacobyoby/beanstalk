@@ -2,16 +2,26 @@ import { useEffect, useState, useRef } from 'react'
 import type { Recall, RecallClassification } from './types/recall'
 import { fetchRecalls, getLastSynced, isDemoMode, type FetchError } from './lib/api'
 import { matchesWatchlist } from './lib/watchlist'
-import { requestNotificationPermission, sendNotification } from './lib/notifications'
+import { getPermissionStatus, requestNotificationPermission, sendNotification } from './lib/notifications'
 import RecallCard from './components/RecallCard'
 import RecallDetail from './components/RecallDetail'
 import SearchBar from './components/SearchBar'
-import FilterPanel from './components/FilterPanel'
+import FilterPanel, { countActiveFilters } from './components/FilterPanel'
 import WatchlistPanel from './components/WatchlistPanel'
+import DataStatus from './components/DataStatus'
+import SkeletonGrid from './components/SkeletonGrid'
 import { isNewRecall } from './lib/formatDate'
 import { useWatchlist } from './hooks/useWatchlist'
 import { useDarkMode } from './hooks/useDarkMode'
-import { getDietaryMatches, type DietaryConcern } from './lib/dietary'
+import { useMediaQuery } from './hooks/useMediaQuery'
+import type { DietaryConcern } from './lib/dietary'
+
+const PAGE_SIZE = 6
+const FDA_MAX_SKIP = 25000
+
+function formatRetrieved(iso: string | null): string {
+  return iso ? new Date(iso).toLocaleString() : 'unknown'
+}
 
 export default function App() {
   const [recalls, setRecalls] = useState<Recall[]>([])
@@ -29,22 +39,23 @@ export default function App() {
   const [selected, setSelected] = useState<Recall | null>(null)
   const [page, setPage] = useState(0)
   const [lastSynced, setLastSynced] = useState<string | null>(getLastSynced())
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState<boolean>(() => getPermissionStatus() === 'granted')
   const { items: watchlist, add: addToWatchlist, remove: removeFromWatchlist } = useWatchlist()
   const { dark, toggle: toggleDark } = useDarkMode()
+  const isDesktop = useMediaQuery('(min-width: 1024px)')
   const seenIdsRef = useRef<Set<string>>(new Set())
   const firstLoadRef = useRef(true)
   const requestIdRef = useRef(0)
   const abortRef = useRef<AbortController | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
   const triggerReload = () => setReloadKey(k => k + 1)
-  const limit = 6
-  const FDA_MAX_SKIP = 25000
-  const maxPage = Math.floor(FDA_MAX_SKIP / limit)
-  const rawTotalPages = Math.ceil(total / limit)
+  const alertsSupported = getPermissionStatus() !== 'unsupported'
+  const maxPage = Math.floor(FDA_MAX_SKIP / PAGE_SIZE)
+  const rawTotalPages = Math.ceil(total / PAGE_SIZE)
   const totalPages = Math.max(1, Math.min(rawTotalPages, maxPage + 1))
-  const reachableTotal = Math.min(total, (maxPage + 1) * limit)
+  const reachableTotal = Math.min(total, (maxPage + 1) * PAGE_SIZE)
   const hasTruncatedWindow = total > reachableTotal
+  const activeFilters = countActiveFilters(classification, status, state, dietary)
 
   useEffect(() => { const t = setTimeout(() => setDebounced(query), 400); return () => clearTimeout(t) }, [query])
 
@@ -69,7 +80,7 @@ export default function App() {
     abortRef.current = controller
     setLoading(true)
     setError(null)
-    fetchRecalls({ search: debounced, limit, skip: Math.min(page * limit, 25000), classification, status, state, dietary, signal: controller.signal }).then(({ recalls: data, total: t, error: err, isStale: stale, isDemo: demo, lastSynced: retrievedAt }) => {
+    fetchRecalls({ search: debounced, limit: PAGE_SIZE, skip: Math.min(page * PAGE_SIZE, FDA_MAX_SKIP), classification, status, state, dietary, signal: controller.signal }).then(({ recalls: data, total: t, error: err, isStale: stale, isDemo: demo, lastSynced: retrievedAt }) => {
       if (requestId !== requestIdRef.current) return
       if (controller.signal.aborted) return
       setRecalls(data)
@@ -96,87 +107,177 @@ export default function App() {
     return () => controller.abort()
   }, [debounced, page, classification, status, state, dietary, reloadKey, watchlist, notificationsEnabled])
 
+  const clearAll = () => {
+    setClassification('')
+    setStatus('')
+    setState('')
+    setDietary([])
+    setQuery('')
+  }
+  const enableAlerts = () => {
+    requestNotificationPermission().then(granted => setNotificationsEnabled(granted))
+  }
+
+  const showError = !loading && error !== null && !isStale && recalls.length === 0
+  const showEmpty = !loading && error === null && recalls.length === 0
+  const showResults = !loading && !showError && recalls.length > 0
+
+  const sidebarPanels = (
+    <>
+      <FilterPanel
+        classification={classification}
+        status={status}
+        state={state}
+        dietary={dietary}
+        onClassification={setClassification}
+        onStatus={setStatus}
+        onState={setState}
+        onDietary={setDietary}
+        onClear={clearAll}
+      />
+      <WatchlistPanel
+        items={watchlist}
+        onAdd={addToWatchlist}
+        onRemove={removeFromWatchlist}
+        alertsEnabled={notificationsEnabled}
+        alertsSupported={alertsSupported}
+        onEnableAlerts={enableAlerts}
+      />
+    </>
+  )
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-amber-700 text-white px-3 py-2 rounded">Skip to content</a>
-      <header className="lg:sticky lg:top-0 z-10 bg-white dark:bg-zinc-900 dark:border-zinc-700 border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Beanstalk</h1>
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 dark:text-zinc-400">
-              {isDemo ? 'Fictional demo' : 'FDA enforcement records'} {!isDemo && (lastSynced ? `— Retrieved ${new Date(lastSynced).toLocaleString()}` : '— Awaiting retrieval')}
-            </p>
-            {!isDemo && <p className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-400 mt-1">Source: openFDA Food Enforcement (2004-present). Status is FDA-reported, not verified real-time lifecycle.</p>}
-          </div>
+    <div className="flex min-h-screen flex-col">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-emerald-700 focus:px-4 focus:py-2 focus:text-white">Skip to content</a>
+
+      <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-6 gap-y-3 px-4 py-3 sm:px-6">
+          <h1 className="flex items-baseline gap-3">
+            <span className="text-xl font-bold tracking-tight text-emerald-800 dark:text-emerald-300">Beanstalk</span>
+            <span className="text-sm font-normal text-zinc-500 dark:text-zinc-400">FDA food recall explorer</span>
+          </h1>
           <div className="flex items-center gap-2">
-            {!isDemo && <div className="text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-zinc-700 dark:text-zinc-300 max-w-sm">
-              <strong>FDA scope:</strong> Enforcement archive; status may remain Ongoing after publication. Verify with FDA before action.
-            </div>}
-            <button onClick={toggleDark} aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'} className="px-3 py-2 border-zinc-400 dark:border-zinc-500 rounded-lg text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px]">{dark ? 'Light' : 'Dark'} mode</button>
+            <DataStatus isDemo={isDemo} isStale={isStale} error={error} lastSynced={lastSynced} />
+            <button
+              type="button"
+              onClick={toggleDark}
+              className="btn btn-quiet px-3"
+              aria-pressed={dark}
+              aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
+            >
+              {dark ? 'Light' : 'Dark'}
+            </button>
           </div>
         </div>
-        {isDemo && <div className="bg-zinc-800 text-white text-center text-sm px-4 py-2">Interactive demo. All records and organizations are fictional.</div>}
-        {isStale && <div className="bg-amber-700 text-white text-center text-sm py-2" role="status">Stale cached data — live FDA request failed ({error?.code}). <button onClick={triggerReload} className="underline">Retry</button> <span>• Cached from {lastSynced ? new Date(lastSynced).toLocaleString() : 'unknown'}</span></div>}
+        {isDemo && (
+          <div className="bg-violet-700 px-4 py-2 text-center text-sm font-medium text-white" role="status">
+            Interactive demo. All records and organizations are fictional.
+          </div>
+        )}
+        {isStale && (
+          <div className="bg-amber-700 px-4 py-2 text-center text-sm text-white" role="status">
+            Stale cached data. The live FDA request failed ({error?.code}).{' '}
+            <button type="button" onClick={triggerReload} className="font-medium underline underline-offset-2">Retry</button>
+            <span> · cached from {formatRetrieved(lastSynced)}</span>
+          </div>
+        )}
       </header>
 
-      <main id="main-content" className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
-        <div className="flex flex-col lg:flex-row gap-6">
-          <aside className="lg:w-64 shrink-0">
-            <div className="space-y-4 lg:sticky lg:top-4">
-              <SearchBar value={query} onChange={setQuery} />
-              {(() => {
-                const activeCount = [classification, status, state, ...dietary].filter(Boolean).length
-                return (
-                  <details className="group" open>
-                    <summary className="lg:hidden flex items-center justify-between border-zinc-400 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 dark:border-zinc-700 cursor-pointer list-none">
-                      <span className="text-sm font-medium">Filters{activeCount ? ` (${activeCount})` : ''}</span>
-                      <span className="text-xs text-zinc-500 dark:text-zinc-400">tap to {activeCount ? 'adjust' : 'filter'}</span>
-                    </summary>
-                    <div className="mt-3 lg:mt-0">
-                      <FilterPanel classification={classification} status={status} state={state} dietary={dietary} onClassification={setClassification} onStatus={setStatus} onState={setState} onDietary={setDietary} onClear={()=>{setClassification('');setStatus('');setState('');setDietary([]);setQuery('')}} />
-                    </div>
-                  </details>
-                )
-              })()}
-              <WatchlistPanel items={watchlist} onAdd={addToWatchlist} onRemove={removeFromWatchlist} />
-              <div className="text-xs text-zinc-600 dark:text-zinc-400 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-700 border-zinc-400 rounded-lg p-3">
-                <p className="font-semibold">Classification</p>
-                <p>{isDemo ? 'These example classifications demonstrate the interface. They do not describe actual recalls.' : 'Class I = reasonable probability of serious adverse health consequences (21 CFR 7.3). Displayed per FDA record.'}</p>
-              </div>
-            </div>
+      <main id="main-content" className="mx-auto w-full max-w-7xl flex-1 px-4 py-6 sm:px-6">
+        <div className="grid gap-6 lg:grid-cols-[288px_minmax(0,1fr)]">
+          <aside aria-label="Search and filters" className="space-y-4 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto lg:pr-1">
+            <SearchBar value={query} onChange={setQuery} />
+            {isDesktop ? sidebarPanels : (
+              <details className="panel">
+                <summary className="flex min-h-[44px] cursor-pointer list-none items-center justify-between px-4 py-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50 [&::-webkit-details-marker]:hidden">
+                  <span>Filters and watchlist</span>
+                  <span className={activeFilters > 0 ? 'chip chip-personal' : 'chip chip-neutral'}>
+                    {activeFilters > 0 ? `${activeFilters} active` : 'Show'}
+                  </span>
+                </summary>
+                <div className="space-y-4 border-t border-zinc-100 p-3 dark:border-zinc-800">{sidebarPanels}</div>
+              </details>
+            )}
           </aside>
 
-          <section className="flex-1 min-w-0" aria-live="polite" aria-busy={loading}>
-            {loading && <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3" role="status">Loading…</p>}
-            {!loading && error && !isStale && recalls.length===0 && (
-              <div className="text-center py-12">
-                <p className="text-zinc-600 dark:text-zinc-400" role="alert">Failed to load recalls: {error.message} ({error.code})</p>
-                {error.retryable && <button onClick={triggerReload} className="mt-3 px-4 py-2 border-zinc-400 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-600">Retry</button>}
+          <section aria-label="Recall results" aria-busy={loading} className="min-w-0">
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <p className="text-sm text-zinc-700 dark:text-zinc-300" role="status" aria-live="polite">
+                {loading
+                  ? 'Loading recalls…'
+                  : hasTruncatedWindow
+                    ? `${reachableTotal.toLocaleString()} of ${total.toLocaleString()} recalls reachable`
+                    : `${total.toLocaleString()} ${total === 1 ? 'recall' : 'recalls'}`}
+                {!loading && ' · newest first'}
+                {!loading && isStale && ' · stale'}
+              </p>
+              <p className="hint">{isDemo ? 'Fictional examples for exploring the interface.' : 'FDA enforcement archive · status as reported by FDA, not verified · not a public safety alert'}</p>
+            </div>
+
+            {loading && <SkeletonGrid />}
+
+            {showError && error && (
+              <div className="panel px-6 py-12 text-center">
+                <p className="font-medium text-zinc-900 dark:text-zinc-50" role="alert">Could not load recalls</p>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{error.message} ({error.code})</p>
+                {error.retryable && <button type="button" onClick={triggerReload} className="btn btn-primary mt-4">Retry</button>}
               </div>
             )}
-            {!loading && !error && recalls.length===0 && <p className="text-zinc-600 dark:text-zinc-400 text-center py-12" role="status">No recalls match your filters.</p>}
-            {!loading && !(error && !isStale && recalls.length===0) && (
+
+            {showEmpty && (
+              <div className="panel px-6 py-12 text-center" role="status">
+                <p className="font-medium text-zinc-900 dark:text-zinc-50">No recalls match</p>
+                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">Try fewer filters or a broader search term.</p>
+                {(activeFilters > 0 || query) && <button type="button" onClick={clearAll} className="btn mt-4">Clear filters</button>}
+              </div>
+            )}
+
+            {showResults && (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {recalls.map(r=> <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={!isDemo && isNewRecall(r.recallInitiationDate)} watchlist={watchlist} dietary={dietary} />)}
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {recalls.map(r => (
+                    <RecallCard key={r.id} recall={r} onSelect={setSelected} isNew={!isDemo && isNewRecall(r.recallInitiationDate)} watchlist={watchlist} dietary={dietary} />
+                  ))}
                 </div>
-                <div className="flex items-center justify-between mt-6">
-                  <button disabled={page===0} onClick={()=>setPage(p=>Math.max(0,p-1))} className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]" aria-label="Previous page">Previous</button>
-                  <span className="text-sm text-zinc-600 dark:text-zinc-400 dark:text-zinc-400" aria-live="polite">Page {page+1} / {totalPages} • {hasTruncatedWindow ? `${reachableTotal} of ${total} reachable` : `${total} results`} {isStale ? '(stale)' : ''}</span>
-                  <button disabled={page+1>=totalPages} onClick={()=>setPage(p=>p+1)} className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]" aria-label="Next page">Next</button>
-                </div>
-                {hasTruncatedWindow && <p className="text-xs text-amber-700 text-center mt-2">Showing first {reachableTotal.toLocaleString()} of {total.toLocaleString()} • Narrow filters to see more • FDA offset limit {FDA_MAX_SKIP.toLocaleString()} prevents beyond page {maxPage+1}</p>}
-                {!isDemo && <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-2">Sorted by report_date desc • Dates shown are recall_initiation_date or report_date from FDA</p>}
+                <nav aria-label="Pagination" className="mt-6 flex items-center justify-between gap-4">
+                  <button type="button" disabled={page === 0} onClick={() => setPage(p => Math.max(0, p - 1))} className="btn" aria-label="Previous page">Previous</button>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400" aria-live="polite">Page {page + 1} of {totalPages}</p>
+                  <button type="button" disabled={page + 1 >= totalPages} onClick={() => setPage(p => p + 1)} className="btn" aria-label="Next page">Next</button>
+                </nav>
+                {hasTruncatedWindow && (
+                  <p className="hint mt-3 text-center">
+                    Showing the first {reachableTotal.toLocaleString()} of {total.toLocaleString()}. FDA's offset limit of {FDA_MAX_SKIP.toLocaleString()} stops paging after page {maxPage + 1}; narrow the filters to see more.
+                  </p>
+                )}
+                {!isDemo && <p className="hint mt-2 text-center">Sorted by report_date, newest first. Dates shown are recall_initiation_date or report_date from FDA.</p>}
               </>
             )}
           </section>
         </div>
       </main>
 
-      {selected && <RecallDetail recall={selected} isDemo={isDemo} onClose={()=>setSelected(null)} />}
+      {selected && <RecallDetail recall={selected} isDemo={isDemo} onClose={() => setSelected(null)} />}
 
-      <footer className="border-t bg-white dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-400 text-xs text-zinc-600 dark:text-zinc-400 px-4 py-4 text-center">
-        {isDemo ? 'Fictional data for interface preview. Do not use this demo to assess food safety.' : <>Data: <a className="underline" href="https://open.fda.gov/apis/food/enforcement/" target="_blank" rel="noreferrer">openFDA Food Enforcement</a> • FDA scope: Enforcement archive; verify with FDA before action. • Not medical advice.</>}
+      <footer className="border-t border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="mx-auto max-w-7xl space-y-3 px-4 py-6 text-sm text-zinc-600 sm:px-6 dark:text-zinc-400">
+          {!isDemo && <details>
+            <summary className="cursor-pointer font-medium text-zinc-800 dark:text-zinc-200">About this data</summary>
+            <div className="mt-2 max-w-prose space-y-2">
+              <p>
+                Source: <a className="underline underline-offset-2" href="https://open.fda.gov/apis/food/enforcement/" target="_blank" rel="noreferrer">openFDA Food Enforcement API</a>, 2004 to present.
+                It is an enforcement archive: status is FDA-reported and may remain Ongoing after publication. It is not a public safety alert feed; verify with FDA before acting.
+              </p>
+              <p>
+                {isStale ? `Stale cache from ${formatRetrieved(lastSynced)}` : lastSynced ? `Last retrieved ${formatRetrieved(lastSynced)}` : 'No retrieval yet'}. Live and cached results are labelled per result set.
+              </p>
+              <p>Class I means a reasonable probability of serious adverse health consequences (21 CFR 7.3). Classes are displayed exactly as the FDA record states them.</p>
+              <p>
+                Meat, poultry, and egg products are regulated by <a className="underline underline-offset-2" href="https://www.fsis.usda.gov/recalls" target="_blank" rel="noreferrer">USDA FSIS</a> and are not in this dataset.
+              </p>
+            </div>
+          </details>}
+          <p>{isDemo ? 'Fictional data for interface preview. Do not use this demo to assess food safety.' : 'Not medical advice.'}</p>
+        </div>
       </footer>
     </div>
   )

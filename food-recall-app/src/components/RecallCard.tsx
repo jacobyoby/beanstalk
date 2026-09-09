@@ -1,71 +1,101 @@
 import type { Recall } from '../types/recall'
-import { formatRecallDate } from '../lib/formatDate'
+import { formatRecallDate, toISODate } from '../lib/formatDate'
 import { matchesWatchlist } from '../lib/watchlist'
-import { getDietaryMatches, type DietaryConcern } from '../lib/dietary'
+import { getDietaryMatches, DIETARY_LABELS, type DietaryConcern } from '../lib/dietary'
+import { categorizeReason } from '../lib/reasonCategory'
+import RiskBadge from './RiskBadge'
 
 interface Props {
   recall: Recall
   onSelect: (r: Recall) => void
   isNew: boolean
   watchlist: string[]
-  dietary?: DietaryConcern[]
+  dietary: DietaryConcern[]
 }
 
-function badge(c: string) {
-  if (c === 'Class I') return 'bg-red-600 text-white'
-  if (c === 'Class II') return 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-700'
-  return 'bg-zinc-500 text-white'
+/** Ongoing recalls get the informational tint; every other FDA status stays neutral. */
+export function statusChipClass(status: string): string {
+  return status.toLowerCase() === 'ongoing' ? 'chip chip-info' : 'chip chip-neutral'
 }
 
-export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary = [] }: Props) {
+/**
+ * Accessible card: the title is the single real button, stretched over the whole card with a
+ * pseudo-element so a mouse can click anywhere while keyboard and screen-reader users get one
+ * named control per recall.
+ */
+export default function RecallCard({ recall, onSelect, isNew, watchlist, dietary }: Props) {
   const matchedTerms = matchesWatchlist(
     `${recall.productDescription} ${recall.reasonForRecall} ${recall.recallingFirm}`,
     watchlist
   )
-  const isWatched = matchedTerms.length > 0
   const dietaryMatches = dietary.length > 0 ? getDietaryMatches(recall, dietary) : []
+  const category = categorizeReason(recall.reasonForRecall)
+  const hasPersonalMatch = matchedTerms.length > 0 || dietaryMatches.length > 0
+  const firmLocation = [recall.city, recall.state].filter(Boolean).join(', ')
+  const firmLine = [recall.recallingFirm, firmLocation].filter(Boolean).join(' · ')
+  const highRisk = recall.classification === 'Class I'
 
   return (
     <article
-      role="button"
-      tabIndex={0}
-      onClick={() => onSelect(recall)}
-      onKeyDown={e => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect(recall)
-        }
-      }}
-      aria-label={`View recall ${recall.recallNumber}: ${recall.productDescription}`}
-      className={`bg-white dark:bg-zinc-800 border rounded-xl p-4 hover:shadow-md cursor-pointer transition flex flex-col gap-2 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 ${
-        isNew ? 'border-blue-400 dark:border-blue-500 ring-1 ring-blue-200 dark:ring-blue-800' : 'dark:border-zinc-700'
+      className={`panel relative flex flex-col gap-3 p-4 transition hover:border-zinc-300 hover:shadow-md has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-emerald-600 has-[:focus-visible]:ring-offset-2 dark:hover:border-zinc-700 dark:has-[:focus-visible]:ring-offset-zinc-950 sm:p-5 ${
+        highRisk ? 'border-l-4 border-l-red-700 dark:border-l-red-600' : ''
       }`}
     >
-      <div className="flex gap-2 flex-wrap">
-        <span className={`text-xs px-2 py-1 rounded-full ${badge(recall.classification)}`}>{recall.classification}</span>
-        <span className="text-xs px-2 py-1 rounded-full bg-zinc-100 dark:bg-zinc-700 dark:text-zinc-200 border dark:border-zinc-600">{recall.status}</span>
-        {recall.state && (
-          <span className="text-xs px-2 py-1 rounded-full bg-zinc-100 dark:bg-zinc-700 dark:text-zinc-200 border dark:border-zinc-600">{recall.state}</span>
-        )}
-        {isNew && (
-          <span className="text-xs px-2 py-1 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-700 font-medium">NEW</span>
-        )}
-        {isWatched && (
-          <span className="text-xs px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-700 font-medium">Watching</span>
-        )}
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <RiskBadge classification={recall.classification} />
+          <span className={statusChipClass(recall.status)}>{recall.status}</span>
+          {isNew && (
+            <span className="chip chip-info" title="Recall initiated within the last 30 days">Last 30 days</span>
+          )}
+        </div>
+        <time className="shrink-0 pt-0.5 text-xs text-zinc-500 dark:text-zinc-400" dateTime={toISODate(recall.recallInitiationDate)} title="Recall initiation date">
+          {formatRecallDate(recall.recallInitiationDate)}
+        </time>
       </div>
-      <h3 className="font-semibold text-sm leading-tight line-clamp-2 dark:text-zinc-100">{recall.productDescription}</h3>
-      <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2">{recall.reasonForRecall}</p>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-400">{recall.recallingFirm} • {formatRecallDate(recall.recallInitiationDate)}</p>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400 dark:text-zinc-400 truncate">Dist: {recall.distributionPattern}</p>
-      {isWatched && matchedTerms.length > 0 && (
-        <p className="text-xs text-amber-700 dark:text-amber-400">Watch: {matchedTerms.join(', ')}</p>
-      )}
-      {dietaryMatches.length > 0 && (
-        <p className="text-xs text-emerald-700 dark:text-emerald-400">Dietary: {dietaryMatches.map(m => `${m.concern} via ${m.field} (“${m.term}”)`).join(', ')}</p>
+
+      <div className="space-y-1">
+        {category && (
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">{category}</p>
+        )}
+        <h3 className="text-base font-semibold leading-snug text-zinc-900 dark:text-zinc-50">
+          <button
+            type="button"
+            onClick={() => onSelect(recall)}
+            aria-label={`View recall ${recall.recallNumber}: ${recall.productDescription}`}
+            className="block w-full cursor-pointer text-left focus:outline-none after:absolute after:inset-0 after:content-['']"
+          >
+            <span className="line-clamp-2">{recall.productDescription}</span>
+          </button>
+        </h3>
+        <p className="line-clamp-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{recall.reasonForRecall}</p>
+      </div>
+
+      <dl className="mt-auto space-y-1 text-xs text-zinc-600 dark:text-zinc-400">
+        <div className="flex gap-2">
+          <dt className="w-14 shrink-0 text-zinc-500 dark:text-zinc-400">Firm</dt>
+          <dd className="truncate">{firmLine || 'Not stated'}</dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="w-14 shrink-0 text-zinc-500 dark:text-zinc-400">Sold in</dt>
+          <dd className="truncate">{recall.distributionPattern || 'Not stated'}</dd>
+        </div>
+      </dl>
+
+      {hasPersonalMatch && (
+        <ul className="flex flex-wrap gap-1.5 border-t border-zinc-100 pt-3 dark:border-zinc-800" aria-label="Matches your watchlist or dietary concerns">
+          {matchedTerms.map(term => (
+            <li key={`watch-${term}`} className="chip chip-personal">Watching: {term}</li>
+          ))}
+          {dietaryMatches.map(m => (
+            <li key={`diet-${m.concern}`} className="chip chip-personal">
+              {DIETARY_LABELS[m.concern]} · {m.field}: “{m.term}”
+            </li>
+          ))}
+        </ul>
       )}
       {dietary.length > 0 && dietaryMatches.length === 0 && (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400">No dietary match — absence does not mean allergen-free</p>
+        <p className="hint border-t border-zinc-100 pt-3 dark:border-zinc-800">No dietary match. Absence of a term does not mean allergen-free.</p>
       )}
     </article>
   )

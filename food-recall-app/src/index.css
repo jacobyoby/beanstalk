@@ -2,9 +2,67 @@
 @tailwind components;
 @tailwind utilities;
 
-html { color-scheme: light; }
-html.dark { color-scheme: dark; }
-html.dark body {
-  background-color: #18181b;
-  color: #e4e4e7;
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+body {
+  @apply bg-zinc-50 text-zinc-900 antialiased;
+}
+.dark body {
+  @apply bg-zinc-950 text-zinc-100;
+}
+
+@layer components {
+  .panel {
+    @apply rounded-xl border border-zinc-200 bg-white shadow-sm dark:border-zinc-800 dark:bg-zinc-900;
+  }
+  .label {
+    @apply block text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400;
+  }
+  .input {
+    @apply w-full min-h-[44px] rounded-lg border border-zinc-500 bg-white px-3 py-2 text-base text-zinc-900 shadow-sm placeholder:text-zinc-500 focus:border-emerald-600 focus:outline-none focus:ring-2 focus:ring-emerald-600 dark:border-zinc-500 dark:bg-zinc-950 dark:text-zinc-100 dark:placeholder:text-zinc-400;
+  }
+  .btn {
+    @apply inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-zinc-500 bg-white px-4 py-2 text-sm font-medium text-zinc-800 shadow-sm transition hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:border-zinc-500 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800 dark:focus:ring-offset-zinc-950;
+  }
+  .btn-primary {
+    @apply border-emerald-700 bg-emerald-700 text-white hover:bg-emerald-800 dark:border-emerald-600 dark:bg-emerald-700 dark:text-white dark:hover:bg-emerald-800;
+  }
+  .btn-quiet {
+    @apply border-transparent bg-transparent shadow-none hover:bg-zinc-100 dark:border-transparent dark:bg-transparent dark:hover:bg-zinc-800;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium ring-1 ring-inset;
+  }
+  .chip-neutral {
+    @apply bg-zinc-50 text-zinc-700 ring-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700;
+  }
+  .chip-info {
+    @apply bg-sky-50 text-sky-800 ring-sky-200 dark:bg-sky-950 dark:text-sky-200 dark:ring-sky-800;
+  }
+  .chip-personal {
+    @apply bg-indigo-50 text-indigo-800 ring-indigo-200 dark:bg-indigo-950 dark:text-indigo-200 dark:ring-indigo-800;
+  }
+  .hint {
+    @apply text-xs leading-relaxed text-zinc-500 dark:text-zinc-400;
+  }
+}
+
+@keyframes slide-in-right {
+  from { transform: translateX(100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in {
+  animation: slide-in-right 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
