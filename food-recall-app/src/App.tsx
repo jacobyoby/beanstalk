@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import BeanstalkMark from "./components/BeanstalkMark";
 import EventCard from "./components/EventCard";
 import EventDetail from "./components/EventDetail";
 import FilterPanel from "./components/FilterPanel";
+import PantrySketch from "./components/PantrySketch";
 import RecallCard from "./components/RecallCard";
 import RecallDetail from "./components/RecallDetail";
 import SearchBar from "./components/SearchBar";
@@ -255,14 +257,25 @@ export default function App() {
     <div className="min-h-screen flex flex-col">
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-amber-700 text-white px-3 py-2 rounded"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-50 focus:rounded-lg focus:bg-emerald-700 focus:px-4 focus:py-2 focus:text-white"
       >
         Skip to content
       </a>
-      <header className="lg:sticky lg:top-0 z-10 bg-white dark:bg-zinc-900 dark:border-zinc-700 border-b shadow-xs">
+      <header className="site-header lg:sticky lg:top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Beanstalk</h1>
+            <h1
+              className="flex max-w-full flex-wrap items-center gap-3"
+              aria-label="beanstalk FDA food recall explorer"
+            >
+              <span className="brand-name">
+                <span className="sprouting-b">
+                  b
+                  <BeanstalkMark className="wordmark-leaves" />
+                </span>
+                eanstalk
+              </span>
+            </h1>
             <p className="text-sm text-zinc-600 dark:text-zinc-400">
               {tab === "recalls" ? (
                 <>
@@ -287,7 +300,7 @@ export default function App() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <div className="text-xs bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-3 py-2 text-zinc-700 dark:text-zinc-300 max-w-sm">
+            <div className="panel text-xs px-3 py-2 text-zinc-700 dark:text-zinc-300 max-w-sm">
               {tab === "recalls" ? (
                 <>
                   <strong>FDA scope:</strong> {OPENFDA_AS_PUBLISHED} Status may remain Ongoing after a recall ends.
@@ -304,7 +317,7 @@ export default function App() {
                 type="button"
                 onClick={handleEnableNotifications}
                 aria-label="Enable browser alert notifications for watchlist recalls"
-                className="px-3 py-2 border-zinc-400 dark:border-zinc-500 rounded-lg text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-amber-600 min-h-[44px]"
+                className="btn"
               >
                 Enable Alerts
               </button>
@@ -322,18 +335,14 @@ export default function App() {
               type="button"
               onClick={toggleDark}
               aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-              className="px-3 py-2 border-zinc-400 dark:border-zinc-500 rounded-lg text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-amber-600 min-h-[44px]"
+              className="btn btn-quiet px-3"
             >
               {dark ? "Light" : "Dark"} mode
             </button>
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-4 pb-3">
-          <div
-            className="inline-flex rounded-lg border border-zinc-300 dark:border-zinc-600 p-1 bg-zinc-50 dark:bg-zinc-800"
-            role="tablist"
-            aria-label="Data source"
-          >
+          <div className="panel inline-flex p-1" role="tablist" aria-label="Data source">
             <button
               type="button"
               role="tab"
@@ -343,7 +352,7 @@ export default function App() {
               onClick={() => setTab("recalls")}
               className={`px-4 py-2 text-sm rounded-md min-h-[44px] focus:outline-hidden focus:ring-2 focus:ring-amber-600 ${
                 tab === "recalls"
-                  ? "bg-white dark:bg-zinc-700 font-semibold text-zinc-900 dark:text-zinc-100 shadow-xs"
+                  ? "bg-paper dark:bg-zinc-700 font-semibold text-zinc-900 dark:text-zinc-100 shadow-xs"
                   : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
               }`}
             >
@@ -358,7 +367,7 @@ export default function App() {
               onClick={() => setTab("events")}
               className={`px-4 py-2 text-sm rounded-md min-h-[44px] focus:outline-hidden focus:ring-2 focus:ring-violet-600 ${
                 tab === "events"
-                  ? "bg-white dark:bg-zinc-700 font-semibold text-violet-900 dark:text-violet-100 shadow-xs"
+                  ? "bg-paper dark:bg-zinc-700 font-semibold text-violet-900 dark:text-violet-100 shadow-xs"
                   : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
               }`}
             >
@@ -389,6 +398,17 @@ export default function App() {
       </header>
 
       <main id="main-content" className="max-w-7xl mx-auto w-full px-4 py-6 flex-1">
+        <div className="garden-intro">
+          <div>
+            <h2>A little clarity for your pantry.</h2>
+            <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+              {tab === "recalls"
+                ? "Search by product, state, or dietary concern."
+                : "Search adverse event reports by product, reaction, or outcome."}
+            </p>
+          </div>
+          <PantrySketch />
+        </div>
         <div className="flex flex-col lg:flex-row gap-6">
           <aside className="lg:w-64 shrink-0">
             <div className="space-y-4 lg:sticky lg:top-4">
@@ -398,7 +418,7 @@ export default function App() {
                   const activeCount = [classification, status, state, ...dietary].filter(Boolean).length;
                   return (
                     <details className="group" open>
-                      <summary className="lg:hidden flex items-center justify-between border-zinc-400 rounded-lg px-3 py-2 bg-white dark:bg-zinc-800 dark:border-zinc-700 cursor-pointer list-none">
+                      <summary className="panel lg:hidden flex items-center justify-between px-3 py-2 cursor-pointer list-none">
                         <span className="text-sm font-medium">Filters{activeCount ? ` (${activeCount})` : ""}</span>
                         <span className="text-xs text-zinc-500 dark:text-zinc-400">
                           tap to {activeCount ? "adjust" : "filter"}
@@ -447,7 +467,7 @@ export default function App() {
               )}
               <WatchlistPanel items={watchlist} onAdd={addToWatchlist} onRemove={removeFromWatchlist} />
               {tab === "recalls" ? (
-                <div className="text-xs text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-700 border-zinc-400 rounded-lg p-3 space-y-2">
+                <div className="panel hint p-3 space-y-2">
                   <p className="font-semibold">Classification</p>
                   <p>
                     Class I = reasonable probability of serious adverse health consequences (21 CFR 7.3). Displayed per
@@ -461,7 +481,7 @@ export default function App() {
                   </p>
                 </div>
               ) : (
-                <div className="text-xs text-zinc-600 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 dark:border-zinc-700 border-zinc-400 rounded-lg p-3">
+                <div className="panel hint p-3">
                   <p className="font-semibold">Watchlist alerts</p>
                   <p>Watchlist terms also match adverse event product brands, reactions, and outcomes on this tab.</p>
                 </div>
@@ -484,25 +504,25 @@ export default function App() {
                 </p>
               )}
               {!loading && error && !isStale && recalls.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-zinc-600 dark:text-zinc-400" role="alert">
+                <div className="panel px-6 py-12 text-center">
+                  <p className="font-medium text-zinc-900 dark:text-zinc-50" role="alert">
                     Failed to load recalls: {error.message} ({error.code})
                   </p>
                   {error.retryable && (
-                    <button
-                      type="button"
-                      onClick={triggerReload}
-                      className="mt-3 px-4 py-2 border-zinc-400 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-600"
-                    >
+                    <button type="button" onClick={triggerReload} className="btn btn-primary mt-4">
                       Retry
                     </button>
                   )}
                 </div>
               )}
               {!loading && !error && recalls.length === 0 && (
-                <p className="text-zinc-600 dark:text-zinc-400 text-center py-12" role="status">
-                  No recalls match your filters.
-                </p>
+                <div className="panel px-6 py-12 text-center" role="status">
+                  <BeanstalkMark className="mx-auto mb-4 h-16 w-16 text-zinc-500 dark:text-zinc-400" />
+                  <p className="font-medium text-zinc-900 dark:text-zinc-50">No recalls match your filters.</p>
+                  <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                    Try a shorter search or remove a filter. No results doesn’t mean a product is safe.
+                  </p>
+                </div>
               )}
               {!loading && !(error && !isStale && recalls.length === 0) && (
                 <>
@@ -515,7 +535,7 @@ export default function App() {
                         id="date-sort"
                         value={dateSort}
                         onChange={(e) => setDateSort(e.target.value === "oldest" ? "oldest" : "newest")}
-                        className="border-zinc-400 dark:border-zinc-500 rounded-lg px-3 py-2 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 min-h-[44px]"
+                        className="input w-auto"
                       >
                         <option value="newest">Newest first</option>
                         <option value="oldest">Oldest first</option>
@@ -539,7 +559,7 @@ export default function App() {
                       type="button"
                       disabled={page === 0}
                       onClick={() => setPage((p) => Math.max(0, p - 1))}
-                      className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-hidden focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]"
+                      className="btn"
                       aria-label="Previous page"
                     >
                       Previous
@@ -553,20 +573,20 @@ export default function App() {
                       type="button"
                       disabled={page + 1 >= totalPages}
                       onClick={() => setPage((p) => p + 1)}
-                      className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-hidden focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]"
+                      className="btn"
                       aria-label="Next page"
                     >
                       Next
                     </button>
                   </div>
                   {hasTruncatedWindow && (
-                    <p className="text-xs text-amber-700 text-center mt-2">
+                    <p className="hint text-center mt-2">
                       Showing the first {reachableTotal.toLocaleString()} of {total.toLocaleString()}. FDA&apos;s offset
                       limit of {FDA_MAX_SKIP.toLocaleString()} stops paging after page {maxPage + 1}; narrow the filters
                       to see more.
                     </p>
                   )}
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-2">
+                  <p className="hint text-center mt-2">
                     Sorted by date, {dateSort === "newest" ? "newest" : "oldest"} first. Dates shown are
                     recall_initiation_date or report_date from FDA.
                   </p>
@@ -596,25 +616,24 @@ export default function App() {
                 </p>
               )}
               {!eventLoading && eventError && !eventIsStale && events.length === 0 && (
-                <div className="text-center py-12">
-                  <p className="text-zinc-600 dark:text-zinc-400" role="alert">
+                <div className="panel px-6 py-12 text-center">
+                  <p className="font-medium text-zinc-900 dark:text-zinc-50" role="alert">
                     Failed to load adverse event reports: {eventError.message} ({eventError.code})
                   </p>
                   {eventError.retryable && (
-                    <button
-                      type="button"
-                      onClick={triggerEventReload}
-                      className="mt-3 px-4 py-2 border-zinc-400 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-violet-600"
-                    >
+                    <button type="button" onClick={triggerEventReload} className="btn btn-primary mt-4">
                       Retry
                     </button>
                   )}
                 </div>
               )}
               {!eventLoading && !eventError && events.length === 0 && (
-                <p className="text-zinc-600 dark:text-zinc-400 text-center py-12" role="status">
-                  No adverse event reports match your search.
-                </p>
+                <div className="panel px-6 py-12 text-center" role="status">
+                  <BeanstalkMark className="mx-auto mb-4 h-16 w-16 text-zinc-500 dark:text-zinc-400" />
+                  <p className="font-medium text-zinc-900 dark:text-zinc-50">
+                    No adverse event reports match your search.
+                  </p>
+                </div>
               )}
               {!eventLoading && !(eventError && !eventIsStale && events.length === 0) && (
                 <>
@@ -634,7 +653,7 @@ export default function App() {
                       type="button"
                       disabled={eventPage === 0}
                       onClick={() => setEventPage((p) => Math.max(0, p - 1))}
-                      className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-hidden focus:ring-2 focus:ring-violet-600 min-h-[44px] min-w-[44px]"
+                      className="btn"
                       aria-label="Previous page"
                     >
                       Previous
@@ -650,20 +669,20 @@ export default function App() {
                       type="button"
                       disabled={eventPage + 1 >= eventTotalPages}
                       onClick={() => setEventPage((p) => p + 1)}
-                      className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-hidden focus:ring-2 focus:ring-violet-600 min-h-[44px] min-w-[44px]"
+                      className="btn"
                       aria-label="Next page"
                     >
                       Next
                     </button>
                   </div>
                   {eventHasTruncatedWindow && (
-                    <p className="text-xs text-amber-700 text-center mt-2">
+                    <p className="hint text-center mt-2">
                       Showing the first {eventReachableTotal.toLocaleString()} of {eventTotal.toLocaleString()}.
                       FDA&apos;s offset limit of {FDA_MAX_SKIP.toLocaleString()} stops paging after page {maxPage + 1}.
                       Narrow the search to see more.
                     </p>
                   )}
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400 text-center mt-2">
+                  <p className="hint text-center mt-2">
                     Sorted by date_started, newest first. Unverified CAERS reports only.
                   </p>
                 </>
@@ -686,23 +705,54 @@ export default function App() {
       )}
       {selectedEvent && <EventDetail event={selectedEvent} onClose={() => setSelectedEvent(null)} />}
 
-      <footer className="border-t bg-white dark:bg-zinc-900 dark:border-zinc-700 dark:text-zinc-400 text-xs text-zinc-600 dark:text-zinc-400 px-4 py-4 text-center">
-        Data:{" "}
-        <a
-          className="underline"
-          href="https://open.fda.gov/apis/food/enforcement/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          openFDA Food Enforcement
-        </a>
-        {" · "}
-        <a className="underline" href="https://open.fda.gov/apis/food/event/" target="_blank" rel="noopener noreferrer">
-          openFDA Food Adverse Events
-        </a>
-        {" · "}
-        {OPENFDA_AS_PUBLISHED} Early Signals are unverified community reports, not recalls. Verify with FDA before
-        action. • Not medical advice.
+      <footer className="site-footer border-t border-zinc-200 dark:border-zinc-800">
+        <div className="mx-auto max-w-7xl space-y-3 px-4 py-6 text-sm text-zinc-600 sm:px-6 dark:text-zinc-400">
+          <p>
+            Data:{" "}
+            <a
+              className="underline underline-offset-2"
+              href="https://open.fda.gov/apis/food/enforcement/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              openFDA Food Enforcement
+            </a>
+            {" · "}
+            <a
+              className="underline underline-offset-2"
+              href="https://open.fda.gov/apis/food/event/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              openFDA Food Adverse Events
+            </a>
+            {" · "}
+            {OPENFDA_AS_PUBLISHED} Early Signals are unverified community reports, not recalls. Verify with FDA before
+            action. • Not medical advice.
+          </p>
+          <p>
+            Beanstalk is free, built by JACOBRAKAI FOUNDATION, a 501(c)(3) public charity (EIN 33-3382083).{" "}
+            <a
+              className="underline underline-offset-2"
+              href="https://donate.stripe.com/eVq4gy97DanS9h60phfrW00"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Donate to JACOBRAKAI FOUNDATION, a 501(c)(3) public charity"
+              data-testid="donate-link"
+            >
+              Donate
+            </a>
+            {" · "}
+            <a
+              className="underline underline-offset-2"
+              href="https://jacobrakai.org/donate/"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              How gifts are used
+            </a>
+          </p>
+        </div>
       </footer>
     </div>
   );

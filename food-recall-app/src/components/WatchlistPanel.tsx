@@ -19,10 +19,10 @@ export default function WatchlistPanel({ items, onAdd, onRemove }: Props) {
   }
 
   return (
-    <div className="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl p-4 space-y-3">
+    <div className="panel space-y-3 p-4">
       <div className="flex items-center justify-between">
         <h2 className="font-semibold text-sm dark:text-zinc-100">Watchlist</h2>
-        <span className="text-xs text-zinc-500 dark:text-zinc-400">
+        <span className="hint">
           {items.length} term{items.length !== 1 ? "s" : ""}
         </span>
       </div>
@@ -37,33 +37,26 @@ export default function WatchlistPanel({ items, onAdd, onRemove }: Props) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Brand, keyword, allergen…"
-          className="flex-1 border-zinc-400 dark:border-zinc-500 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-amber-600"
+          autoComplete="off"
+          className="input min-w-0 flex-1"
         />
-        <button
-          type="submit"
-          className="px-3 py-2 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition min-h-[44px] min-w-[44px]"
-        >
+        <button type="submit" className="btn btn-primary shrink-0">
           Add
         </button>
       </form>
 
       {items.length === 0 && (
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 italic">
-          Add keywords to get alerts when matching recalls or adverse event reports appear.
-        </p>
+        <p className="hint italic">Add keywords to get alerts when matching recalls or adverse event reports appear.</p>
       )}
 
       <div className="flex flex-wrap gap-1.5">
         {items.map((term) => (
-          <span
-            key={term}
-            className="inline-flex items-center gap-1 text-xs bg-amber-50 dark:bg-amber-900/30 text-amber-800 dark:text-amber-200 border border-amber-200 dark:border-amber-700 rounded-full px-2 py-1"
-          >
+          <span key={term} className="chip chip-personal pr-0.5">
             {term}
             <button
               type="button"
               onClick={() => onRemove(term)}
-              className="hover:text-red-600 dark:hover:text-red-400 font-bold min-h-[24px] min-w-[24px] flex items-center justify-center"
+              className="ml-0.5 flex h-6 w-6 items-center justify-center rounded text-indigo-700 hover:bg-indigo-100 focus:ring-2 focus:ring-emerald-600 focus:outline-hidden dark:text-indigo-300 dark:hover:bg-indigo-900"
               aria-label={`Remove ${term}`}
             >
               ×

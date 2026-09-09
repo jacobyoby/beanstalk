@@ -216,7 +216,7 @@ describe("App search and pagination", () => {
 
   it("renders app header with Beanstalk title", async () => {
     render(<App />);
-    await waitFor(() => expect(screen.getByText("Beanstalk")).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByRole("heading", { name: /beanstalk/i })).toBeInTheDocument());
   });
 
   it("debounces search input — fetchRecalls not called immediately on typing", async () => {

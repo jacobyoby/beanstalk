@@ -24,9 +24,9 @@ export default function DietaryFilter({ selected, onChange }: Props) {
     else onChange([...selected, c]);
   };
   return (
-    <div className="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl p-4 space-y-3">
+    <div className="space-y-3">
       <h2 className="font-semibold text-sm dark:text-zinc-100">Dietary concerns</h2>
-      <p className="text-xs text-zinc-500 dark:text-zinc-400">
+      <p className="hint">
         Matches recall reason or product description (source-stated). Absence of a term does not mean allergen-free.
         Wheat allergy is distinct from gluten.
       </p>
@@ -51,12 +51,12 @@ export default function DietaryFilter({ selected, onChange }: Props) {
             </label>
           ))}
         </div>
-        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+        <p className="hint mt-1">
           Vegan/vegetarian/halal/kosher are source-stated claims; gluten includes wheat/barley/rye/malt. Not certified.
         </p>
       </div>
       {selected.length > 0 && (
-        <p className="text-xs text-amber-700">
+        <p className="text-xs text-emerald-800 dark:text-emerald-300">
           Filtering by {selected.map((s) => DIETARY_LABELS[s]).join(", ")} — {selected.length} concern(s)
         </p>
       )}

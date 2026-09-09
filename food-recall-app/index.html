@@ -10,8 +10,21 @@
   <meta property="og:description" content="Track FDA food recalls and allergen alerts for your dietary needs">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://jacobyoby.github.io/beanstalk/">
-  <link rel="icon" type="image/svg+xml" href="/icon-192.svg">
-  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <meta name="theme-color" content="#f8f6ee" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#111e17" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg">
+  <link rel="icon" href="%BASE_URL%favicon.ico" sizes="any">
+  <link rel="apple-touch-icon" href="%BASE_URL%apple-touch-icon.png">
+  <script>
+    // Apply the stored or system theme before first paint to avoid a light flash.
+    try {
+      const stored = localStorage.getItem("ponder_dark_mode");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (stored === "true" || (stored === null && prefersDark)) document.documentElement.classList.add("dark");
+    } catch {
+      /* storage unavailable */
+    }
+  </script>
 </head>
-<body class="bg-zinc-50"><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
+<body><div id="root"></div><script type="module" src="/src/main.tsx"></script></body>
 </html>

@@ -43,16 +43,16 @@ export default function RecallDetail({ recall, onClose, onSelectEvent }: Props) 
   return (
     <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-labelledby="recall-title">
       <div className="flex-1 bg-black/40" onClick={onClose} aria-hidden="true" />
-      <div className="w-full max-w-lg bg-white dark:bg-zinc-800 h-full overflow-auto p-6 shadow-xl">
+      <div className="w-full max-w-lg bg-paper dark:bg-zinc-900 h-full overflow-auto p-6 shadow-xl">
         <div className="flex justify-between items-start gap-4">
-          <h2 id="recall-title" className="text-lg font-bold dark:text-zinc-100">
+          <h2 id="recall-title" className="font-display text-lg font-bold dark:text-zinc-100">
             {recall.productDescription}
           </h2>
           <button
             type="button"
             ref={closeRef}
             onClick={onClose}
-            className="border dark:border-zinc-600 rounded-lg px-3 py-2 text-sm shrink-0 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 focus:outline-hidden focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]"
+            className="btn shrink-0"
             aria-label="Close recall details"
           >
             Close

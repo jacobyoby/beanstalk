@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="512" height="512">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="32" height="32">
   <title>beanstalk</title>
   <rect width="192" height="192" rx="42" fill="#264f3b"/>
   <g transform="scale(4)" fill="none" stroke="#f8f4e7" stroke-linecap="round" stroke-linejoin="round">
