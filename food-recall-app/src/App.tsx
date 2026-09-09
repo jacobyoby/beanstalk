@@ -290,6 +290,12 @@ export default function App() {
             </div>
           </details>}
           <p>{isDemo ? 'Fictional data for interface preview. Do not use this demo to assess food safety.' : 'Not medical advice.'}</p>
+          <p>
+            Beanstalk is free, built by JACOBRAKAI FOUNDATION, a 501(c)(3) public charity (EIN 33-3382083).{' '}
+            <a className="underline underline-offset-2" href="https://donate.stripe.com/eVq4gy97DanS9h60phfrW00" target="_blank" rel="noopener noreferrer" title="Donate to JACOBRAKAI FOUNDATION, a 501(c)(3) public charity" data-testid="donate-link">Donate</a>
+            {' · '}
+            <a className="underline underline-offset-2" href="https://jacobrakai.org/donate/" target="_blank" rel="noopener noreferrer">How gifts are used</a>
+          </p>
         </div>
       </footer>
     </div>
