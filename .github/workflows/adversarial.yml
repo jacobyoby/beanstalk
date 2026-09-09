@@ -41,7 +41,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
       - run: npm ci
         working-directory: food-recall-app
@@ -71,7 +71,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
       - run: npm ci
         working-directory: food-recall-app
@@ -87,7 +87,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
       - name: Build check
         working-directory: food-recall-app
