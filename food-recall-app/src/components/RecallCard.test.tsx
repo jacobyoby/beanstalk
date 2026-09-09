@@ -140,4 +140,42 @@ describe("RecallCard", () => {
     render(<RecallCard recall={makeRecall()} onSelect={() => {}} isNew={false} watchlist={[]} />);
     expect(screen.getByText(/Dist: Nationwide/)).toBeTruthy();
   });
+
+  it("does not call onSelect on other keys", () => {
+    const onSelect = vi.fn();
+    render(<RecallCard recall={makeRecall()} onSelect={onSelect} isNew={false} watchlist={[]} />);
+    fireEvent.keyDown(screen.getByRole("button"), { key: "Escape" });
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it("handles empty distribution pattern gracefully", () => {
+    render(
+      <RecallCard recall={makeRecall({ distributionPattern: "" })} onSelect={() => {}} isNew={false} watchlist={[]} />,
+    );
+    expect(screen.getByText(/Dist:/)).toBeTruthy();
+  });
+
+  it("handles Class II classification badge styling", () => {
+    render(
+      <RecallCard
+        recall={makeRecall({ classification: "Class II" })}
+        onSelect={() => {}}
+        isNew={false}
+        watchlist={[]}
+      />,
+    );
+    expect(screen.getByText("Class II")).toBeTruthy();
+  });
+
+  it("handles Class III classification badge styling", () => {
+    render(
+      <RecallCard
+        recall={makeRecall({ classification: "Class III" })}
+        onSelect={() => {}}
+        isNew={false}
+        watchlist={[]}
+      />,
+    );
+    expect(screen.getByText("Class III")).toBeTruthy();
+  });
 });
