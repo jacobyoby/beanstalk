@@ -257,7 +257,7 @@ export default function App() {
       >
         Skip to content
       </a>
-      <header className="lg:sticky lg:top-0 z-10 bg-white dark:bg-zinc-900 dark:border-zinc-700 border-b shadow-sm">
+      <header className="lg:sticky lg:top-0 z-10 bg-white dark:bg-zinc-900 dark:border-zinc-700 border-b shadow-xs">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row gap-3 sm:items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-100">Beanstalk</h1>
@@ -302,7 +302,7 @@ export default function App() {
                 type="button"
                 onClick={handleEnableNotifications}
                 aria-label="Enable browser alert notifications for watchlist recalls"
-                className="px-3 py-2 border-zinc-400 dark:border-zinc-500 rounded-lg text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px]"
+                className="px-3 py-2 border-zinc-400 dark:border-zinc-500 rounded-lg text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-amber-600 min-h-[44px]"
               >
                 Enable Alerts
               </button>
@@ -320,7 +320,7 @@ export default function App() {
               type="button"
               onClick={toggleDark}
               aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-              className="px-3 py-2 border-zinc-400 dark:border-zinc-500 rounded-lg text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px]"
+              className="px-3 py-2 border-zinc-400 dark:border-zinc-500 rounded-lg text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-amber-600 min-h-[44px]"
             >
               {dark ? "Light" : "Dark"} mode
             </button>
@@ -339,9 +339,9 @@ export default function App() {
               aria-selected={tab === "recalls"}
               aria-controls="panel-recalls"
               onClick={() => setTab("recalls")}
-              className={`px-4 py-2 text-sm rounded-md min-h-[44px] focus:outline-none focus:ring-2 focus:ring-amber-600 ${
+              className={`px-4 py-2 text-sm rounded-md min-h-[44px] focus:outline-hidden focus:ring-2 focus:ring-amber-600 ${
                 tab === "recalls"
-                  ? "bg-white dark:bg-zinc-700 font-semibold text-zinc-900 dark:text-zinc-100 shadow-sm"
+                  ? "bg-white dark:bg-zinc-700 font-semibold text-zinc-900 dark:text-zinc-100 shadow-xs"
                   : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
               }`}
             >
@@ -354,9 +354,9 @@ export default function App() {
               aria-selected={tab === "events"}
               aria-controls="panel-events"
               onClick={() => setTab("events")}
-              className={`px-4 py-2 text-sm rounded-md min-h-[44px] focus:outline-none focus:ring-2 focus:ring-violet-600 ${
+              className={`px-4 py-2 text-sm rounded-md min-h-[44px] focus:outline-hidden focus:ring-2 focus:ring-violet-600 ${
                 tab === "events"
-                  ? "bg-white dark:bg-zinc-700 font-semibold text-violet-900 dark:text-violet-100 shadow-sm"
+                  ? "bg-white dark:bg-zinc-700 font-semibold text-violet-900 dark:text-violet-100 shadow-xs"
                   : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
               }`}
             >
@@ -436,7 +436,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => setQuery("")}
-                      className="underline text-violet-800 dark:text-violet-300 focus:outline-none focus:ring-2 focus:ring-violet-600 rounded min-h-[44px]"
+                      className="underline text-violet-800 dark:text-violet-300 focus:outline-hidden focus:ring-2 focus:ring-violet-600 rounded min-h-[44px]"
                     >
                       Clear search
                     </button>
@@ -490,7 +490,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={triggerReload}
-                      className="mt-3 px-4 py-2 border-zinc-400 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-600"
+                      className="mt-3 px-4 py-2 border-zinc-400 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-amber-600"
                     >
                       Retry
                     </button>
@@ -521,7 +521,7 @@ export default function App() {
                       type="button"
                       disabled={page === 0}
                       onClick={() => setPage((p) => Math.max(0, p - 1))}
-                      className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]"
+                      className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-hidden focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]"
                       aria-label="Previous page"
                     >
                       Previous
@@ -535,7 +535,7 @@ export default function App() {
                       type="button"
                       disabled={page + 1 >= totalPages}
                       onClick={() => setPage((p) => p + 1)}
-                      className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]"
+                      className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-hidden focus:ring-2 focus:ring-amber-600 min-h-[44px] min-w-[44px]"
                       aria-label="Next page"
                     >
                       Next
@@ -585,7 +585,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={triggerEventReload}
-                      className="mt-3 px-4 py-2 border-zinc-400 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-violet-600"
+                      className="mt-3 px-4 py-2 border-zinc-400 rounded-lg bg-white focus:outline-hidden focus:ring-2 focus:ring-violet-600"
                     >
                       Retry
                     </button>
@@ -615,7 +615,7 @@ export default function App() {
                       type="button"
                       disabled={eventPage === 0}
                       onClick={() => setEventPage((p) => Math.max(0, p - 1))}
-                      className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-violet-600 min-h-[44px] min-w-[44px]"
+                      className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-hidden focus:ring-2 focus:ring-violet-600 min-h-[44px] min-w-[44px]"
                       aria-label="Previous page"
                     >
                       Previous
@@ -631,7 +631,7 @@ export default function App() {
                       type="button"
                       disabled={eventPage + 1 >= eventTotalPages}
                       onClick={() => setEventPage((p) => p + 1)}
-                      className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-violet-600 min-h-[44px] min-w-[44px]"
+                      className="px-4 py-3 border-zinc-400 dark:border-zinc-500 rounded-lg disabled:opacity-40 bg-white dark:bg-zinc-800 dark:text-zinc-200 focus:outline-hidden focus:ring-2 focus:ring-violet-600 min-h-[44px] min-w-[44px]"
                       aria-label="Next page"
                     >
                       Next

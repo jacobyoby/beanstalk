@@ -62,7 +62,7 @@ export default function EventDetail({ event, onClose }: Props) {
             type="button"
             ref={closeRef}
             onClick={onClose}
-            className="border dark:border-zinc-600 rounded-lg px-3 py-2 text-sm shrink-0 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 focus:outline-none focus:ring-2 focus:ring-violet-600 min-h-[44px] min-w-[44px]"
+            className="border dark:border-zinc-600 rounded-lg px-3 py-2 text-sm shrink-0 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 focus:outline-hidden focus:ring-2 focus:ring-violet-600 min-h-[44px] min-w-[44px]"
             aria-label="Close adverse event details"
           >
             Close

@@ -33,7 +33,7 @@ export default function FilterPanel({
         <button
           type="button"
           onClick={onClear}
-          className="text-xs underline text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-amber-600 rounded min-h-[44px] min-w-[44px] px-3 py-2"
+          className="text-xs underline text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 focus:outline-hidden focus:ring-2 focus:ring-amber-600 rounded min-h-[44px] min-w-[44px] px-3 py-2"
           aria-label="Clear all filters"
         >
           Clear

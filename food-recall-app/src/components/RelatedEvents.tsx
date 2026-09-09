@@ -64,7 +64,7 @@ export default function RelatedEvents({ productDescription, onSelectEvent }: Pro
                 <button
                   type="button"
                   onClick={() => onSelectEvent(ev)}
-                  className="w-full text-left border dark:border-zinc-600 rounded-lg p-2 text-xs hover:bg-violet-50 dark:hover:bg-violet-950/40 focus:outline-none focus:ring-2 focus:ring-violet-600 dark:text-zinc-200"
+                  className="w-full text-left border dark:border-zinc-600 rounded-lg p-2 text-xs hover:bg-violet-50 dark:hover:bg-violet-950/40 focus:outline-hidden focus:ring-2 focus:ring-violet-600 dark:text-zinc-200"
                 >
                   <span className="font-medium line-clamp-1">{brand}</span>
                   <span className="block text-zinc-500 dark:text-zinc-400 mt-0.5">
