@@ -49,14 +49,19 @@ const DIETARY_TERMS: Record<DietaryConcern, string[]> = {
 };
 
 const NEGATION_TERMS = ["free", "without", "no ", "not contain", "does not contain"];
+const SUFFIX_NEGATORS = ["-free", " free", "-free,", " free,"];
 
 function containsNegated(text: string, term: string): boolean {
   const lower = text.toLowerCase();
   const termLower = term.toLowerCase();
   let idx = lower.indexOf(termLower);
   while (idx !== -1) {
+    // Check prefix window (~30 chars before the term)
     const before = lower.slice(Math.max(0, idx - 30), idx);
     if (NEGATION_TERMS.some((n) => before.includes(n))) return true;
+    // Check suffix window (~10 chars after the term)
+    const after = lower.slice(idx + termLower.length, idx + termLower.length + 10);
+    if (SUFFIX_NEGATORS.some((s) => after.startsWith(s))) return true;
     idx = lower.indexOf(termLower, idx + 1);
   }
   return false;
