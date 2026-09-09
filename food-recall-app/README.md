@@ -1,32 +1,35 @@
-# Beanstalk — Food Recall Tracker
+# Beanstalk development notes
 
-Responsive Food Recall app — search/filter FDA food recalls with openFDA + mock fallback.
+Beanstalk queries the openFDA food enforcement API. The public app displays real records; sample records are only used by explicit development demo mode. Failed live requests can show labeled cached records or an unavailable state, never an automatic fictional fallback.
 
-## Stack
-Vite + React 18 + TypeScript + Tailwind CSS
+## Run locally
 
-## Data
-- Primary: `https://api.fda.gov/food/enforcement.json` (paginated, no key required)
-- Fallback: `src/lib/mockData.ts` seeded with 2025-2026 major recalls (Jalapeños/Salmonella, Powdered Milk, Pasta/Listeria, undeclared allergens, plastic, Moringa)
+Use Node 22.22.2 or later in the 22.x line, or Node 26. From this directory:
 
-## Run
-```bash
-cd food-recall-app
-npm install
-npm run dev    # http://localhost:5173
-npm run build
-npm run preview
+```sh
+npm ci
+npm run dev
 ```
 
-## Features
-- Responsive layout: single-col mobile, 2-col grid + sticky filters on desktop
-- Recall list with search (debounced, product/reason/firm), classification & status filters, pagination
-- Recall detail drawer/slide-over
-- Tailwind styling, accessible controls
-- Graceful fallback to mock data when openFDA unreachable
+Open the address printed by Vite, normally `http://localhost:5173/`.
 
-## Insights surfaced
-Pathogen contamination (~40-50% Salmonella) dominates 2025-2026; Class I recalls ~70%. Banner highlights 16 active FDA CORE investigations.
+## Checks and builds
 
-## Deploy
-Any static host (Vercel, Netlify, Cloudflare Pages): `npm run build` outputs `dist/`.
+```sh
+npm run lint
+npm test
+npm run build:pages
+npm run preview:pages
+```
+
+The hosted build and preview use `/beanstalk/`. Output is `dist/`. The default `npm run build` and `npm run preview` target the site root. `npm run build:demo` and `npm run preview:demo` explicitly use fictional records.
+
+## Data and credentials
+
+The [FDA food enforcement dataset](https://open.fda.gov/apis/food/enforcement/) is updated weekly and is not intended for public alerting or real-time lifecycle tracking. Reported distribution and dietary text matches do not establish that a product is safe or suitable for a diet.
+
+GitHub Pages calls the public FDA endpoint directly, subject to its [authentication and request limits](https://open.fda.gov/apis/authentication/). It has no private backend. Development can use Vite's proxy with a server-side `OPENFDA_API_KEY`; no owner key belongs in browser code. Hosted builds ignore environment files and public shell variables, and CI verifies exclusion of a fake key sentinel. Never commit credentials.
+
+## Publication
+
+The Pages workflow tests and builds pull requests without deploying them. Changes reaching `main` are built and published with source-commit metadata. See the [deployment and rollback procedure](../docs/github-pages-demo.md) for the current bootstrap state, verification, and recovery steps.

@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
         manifest: {
           name: demo ? 'Beanstalk Demo' : 'Beanstalk',
           short_name: 'Beanstalk',
-          description: demo ? 'Interactive food recall explorer with fictional sample records' : 'Track FDA food recalls and get alerts',
+          description: demo ? 'Interactive food recall explorer with fictional sample records' : 'Explore FDA food recall records',
           start_url: base,
           scope: base,
           theme_color: '#1d4535',

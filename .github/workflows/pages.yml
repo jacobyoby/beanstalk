@@ -60,3 +60,24 @@ jobs:
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
+      - name: Verify served source
+        env:
+          DEPLOYED_URL: ${{ steps.deployment.outputs.page_url }}
+          EXPECTED_COMMIT: ${{ github.sha }}
+        run: |
+          python3 - <<'PYVERIFY'
+          import json, os, time, urllib.request
+          url = os.environ['DEPLOYED_URL'].rstrip('/') + '/build-info.json?commit=' + os.environ['EXPECTED_COMMIT']
+          for attempt in range(6):
+              try:
+                  with urllib.request.urlopen(url, timeout=15) as response:
+                      info = json.load(response)
+                  assert info['sourceCommit'] == os.environ['EXPECTED_COMMIT'], 'Served commit differs from this deployment'
+                  assert info['mode'] == 'pages' and info['fictionalData'] is False, 'Hosted data mode must be live'
+                  print('Served source verified:', info['sourceCommit'])
+                  break
+              except Exception:
+                  if attempt == 5:
+                      raise
+                  time.sleep(5)
+          PYVERIFY
