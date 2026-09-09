@@ -10,7 +10,7 @@ export default defineConfig({
       manifest: {
         name: "Beanstalk — Food Recall Tracker",
         short_name: "Beanstalk",
-        description: "Track FDA food recalls and get alerts",
+        description: "Track FDA food recalls and allergen alerts for your dietary needs",
         theme_color: "#fafafa",
         background_color: "#fafafa",
         display: "standalone",
