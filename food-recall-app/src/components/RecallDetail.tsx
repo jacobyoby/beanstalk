@@ -45,8 +45,8 @@ export default function RecallDetail({ recall, onClose }: Props) {
           <div><dt className="font-semibold">Reason</dt><dd>{recall.reasonForRecall}</dd></div>
           <div><dt className="font-semibold">Firm</dt><dd>{recall.recallingFirm} — {recall.city}, {recall.state}</dd></div>
           <div><dt className="font-semibold">Distribution</dt><dd>{recall.distributionPattern}</dd></div>
-          <div><dt className="font-semibold">Code Info</dt><dd className="whitespace-pre-wrap break-words max-h-64 overflow-auto border rounded p-2 bg-zinc-50 dark:bg-zinc-900 text-xs select-text" tabIndex={0}>{recall.codeInfo || '—'}</dd><dd className="text-xs text-zinc-500 mt-1">Source: FDA code_info</dd></div>
-          {recall.moreCodeInfo && <div><dt className="font-semibold">More Code Info (continuation)</dt><dd className="whitespace-pre-wrap break-words max-h-64 overflow-auto border rounded p-2 bg-zinc-50 dark:bg-zinc-900 text-xs select-text" tabIndex={0}>{recall.moreCodeInfo}</dd><dd className="text-xs text-zinc-500 mt-1">Source: FDA more_code_info — lot 8L5M30 appears only here</dd></div>}
+          <div><dt className="font-semibold">Code Info</dt><dd className="whitespace-pre-wrap break-words max-h-64 overflow-auto border-zinc-400 rounded p-2 bg-zinc-50 dark:bg-zinc-900 text-xs select-text" tabIndex={0}>{recall.codeInfo || '—'}</dd><dd className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Source: FDA code_info</dd></div>
+          {recall.moreCodeInfo && <div><dt className="font-semibold">More Code Info (continuation)</dt><dd className="whitespace-pre-wrap break-words max-h-64 overflow-auto border-zinc-400 rounded p-2 bg-zinc-50 dark:bg-zinc-900 text-xs select-text" tabIndex={0}>{recall.moreCodeInfo}</dd><dd className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Source: FDA more_code_info — lot 8L5M30 appears only here</dd></div>}
           <div><dt className="font-semibold">Initiation Date</dt><dd>{formatRecallDate(recall.recallInitiationDate)}</dd></div>
           {recall.centerClassificationDate && <div><dt className="font-semibold">FDA Classification Date</dt><dd>{formatRecallDate(recall.centerClassificationDate)}</dd></div>}
           {recall.terminationDate && <div><dt className="font-semibold">Termination Date</dt><dd>{formatRecallDate(recall.terminationDate)}</dd></div>}
@@ -65,7 +65,7 @@ export default function RecallDetail({ recall, onClose }: Props) {
         >
           View on FDA Enforcement Reports →
         </a>
-        <p className="text-xs text-zinc-500 mt-2">
+        <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
           Developer: <a href={`https://api.fda.gov/food/enforcement.json?search=recall_number:"${recall.recallNumber}"`} target="_blank" rel="noreferrer" className="underline">raw openFDA JSON</a>
         </p>
       </div>
