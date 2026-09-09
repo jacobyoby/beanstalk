@@ -15,7 +15,7 @@ export default function DietaryFilter({ selected, onChange }: Props) {
   }
   return (
     <div className="bg-white dark:bg-zinc-800 border dark:border-zinc-700 rounded-xl p-4 space-y-3">
-      <h3 className="font-semibold text-sm dark:text-zinc-100">Dietary concerns</h3>
+      <h2 className="font-semibold text-sm dark:text-zinc-100">Dietary concerns</h2>
       <p className="text-xs text-zinc-500 dark:text-zinc-400">Matches recall reason or product description (source-stated). Absence of a term does not mean allergen-free. Wheat allergy is distinct from gluten.</p>
       <div>
         <p className="text-xs font-medium dark:text-zinc-300">FDA major allergens (9)</p>
