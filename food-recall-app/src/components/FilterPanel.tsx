@@ -28,7 +28,7 @@ export default function FilterPanel({ classification, status, state, dietary, on
           id="classification-select"
           value={classification}
           onChange={e => onClassification(e.target.value as RecallClassification | '')}
-          className="mt-1 w-full border dark:border-zinc-600 rounded-lg px-3 py-3 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 min-h-[44px]"
+          className="mt-1 w-full border-zinc-400 dark:border-zinc-500 rounded-lg px-3 py-3 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 min-h-[44px]"
         >
           <option value="">All classes</option>
           <option value="Class I">Class I</option>
@@ -42,7 +42,7 @@ export default function FilterPanel({ classification, status, state, dietary, on
           id="status-select"
           value={status}
           onChange={e => onStatus(e.target.value)}
-          className="mt-1 w-full border dark:border-zinc-600 rounded-lg px-3 py-3 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 min-h-[44px]"
+          className="mt-1 w-full border-zinc-400 dark:border-zinc-500 rounded-lg px-3 py-3 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 min-h-[44px]"
         >
           <option value="">All statuses</option>
           <option value="Ongoing">Ongoing</option>

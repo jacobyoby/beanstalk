@@ -33,7 +33,7 @@ export default function WatchlistPanel({ items, onAdd, onRemove }: Props) {
           value={input}
           onChange={e => setInput(e.target.value)}
           placeholder="Brand, keyword, allergen…"
-          className="flex-1 border dark:border-zinc-600 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
+          className="flex-1 border-zinc-400 dark:border-zinc-500 rounded-lg px-2 py-1.5 text-sm bg-white dark:bg-zinc-700 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-600"
         />
         <button type="submit" className="px-3 py-2 bg-amber-700 text-white rounded-lg text-sm font-medium hover:bg-amber-800 transition min-h-[44px] min-w-[44px]">Add</button>
       </form>
