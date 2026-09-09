@@ -107,9 +107,7 @@ export default function RecallDetail({ recall, onClose, onSelectEvent }: Props) 
               >
                 {recall.moreCodeInfo}
               </dd>
-              <dd className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-                Source: FDA more_code_info — lot 8L5M30 appears only here
-              </dd>
+              <dd className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Source: FDA more_code_info</dd>
             </div>
           )}
           <div>
@@ -156,9 +154,9 @@ export default function RecallDetail({ recall, onClose, onSelectEvent }: Props) 
           </div>
         </dl>
         <a
-          href={`https://www.accessdata.fda.gov/scripts/ires/index.cfm#tabNav_advancedSearch?Product=${encodeURIComponent(
+          href={`https://www.accessdata.fda.gov/scripts/ires/index.cfm?Product=${encodeURIComponent(
             recall.productDescription.slice(0, 80),
-          )}`}
+          )}#tabNav_advancedSearch`}
           target="_blank"
           rel="noreferrer"
           className="mt-6 inline-block text-sm underline text-blue-600 dark:text-blue-400"
@@ -168,7 +166,7 @@ export default function RecallDetail({ recall, onClose, onSelectEvent }: Props) 
         <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-2">
           Developer:{" "}
           <a
-            href={`https://api.fda.gov/food/enforcement.json?search=recall_number:"${recall.recallNumber}"`}
+            href={`https://api.fda.gov/food/enforcement.json?search=recall_number:"${encodeURIComponent(recall.recallNumber)}"`}
             target="_blank"
             rel="noreferrer"
             className="underline"

@@ -14,8 +14,8 @@ Vite + React 18 + TypeScript + Tailwind CSS + PWA (Workbox)
 - **Related Events**: parenthesized OR of product tokens ([#102](https://github.com/jacobyoby/beanstalk/pull/102)).
 - **API Key**: Optional via `VITE_OPENFDA_KEY` env var (increases rate limit from 40 to 240 req/min)
 - **Cache**: 6-hour localStorage cache with LRU eviction for offline/stale serving
-- **Demo Mode**: Add `?demo=1` to URL for fictional test data
-- **Fallback**: `src/lib/mockData.ts` (recalls) and `src/lib/mockEvents.ts` (adverse events) when openFDA is unreachable
+- **Demo Mode**: Add `?demo=1` to URL for fictional mock data (`src/lib/mockData.ts`, `src/lib/mockEvents.ts`)
+- **Fallback**: stale cached data from the last successful fetch (no automatic mock fallback)
 
 ## Run
 ```bash
