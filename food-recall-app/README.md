@@ -1,13 +1,17 @@
 # Beanstalk — Food Recall Tracker
 
-Search and filter FDA food recalls with real-time alerts, dietary concern matching, and offline-capable PWA.
+Search and filter food enforcement records **as published by openFDA**, with dietary concern matching, watchlist alerts, and an offline-capable PWA. Not a live FDA recall-lifecycle feed.
 
 ## Stack
 Vite + React 18 + TypeScript + Tailwind CSS + PWA (Workbox)
 
 ## Data
-- **Primary recalls**: [openFDA Food Enforcement API](https://api.fda.gov/food/enforcement.json) — 29,000+ records, paginated
+- **Primary recalls**: [openFDA Food Enforcement API](https://api.fda.gov/food/enforcement.json) — 29,000+ records **as published by openFDA** (not live FDA lifecycle), paginated
 - **Early Signals (CAERS)**: [openFDA Food Adverse Event API](https://api.fda.gov/food/event.json) — same proxy/auth/rate limits as enforcement
+- **Publish lag**: Dataset typically refreshes mid-week (Wednesday). Status fields are as published, not a current lifecycle.
+- **Empty search**: openFDA returns HTTP 404 + “No matches found” — the app shows an empty list, not an error.
+- **Pagination**: `skip` is capped at 25,000. `search_after` is not implemented; narrow filters to page further.
+- **Related Events**: parenthesized OR of product tokens ([#102](https://github.com/jacobyoby/beanstalk/pull/102)).
 - **API Key**: Optional via `VITE_OPENFDA_KEY` env var (increases rate limit from 40 to 240 req/min)
 - **Cache**: 6-hour localStorage cache with LRU eviction for offline/stale serving
 - **Demo Mode**: Add `?demo=1` to URL for fictional test data

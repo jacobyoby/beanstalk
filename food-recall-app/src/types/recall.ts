@@ -1,4 +1,7 @@
 export type RecallClassification = "Class I" | "Class II" | "Class III" | "Not Yet Classified" | "Unknown";
+
+/** Records are an openFDA snapshot, not a live FDA recall-lifecycle feed. */
+export const OPENFDA_AS_PUBLISHED = "As published by openFDA — not a live FDA recall lifecycle.";
 export interface Recall {
   id: string;
   recallNumber: string;

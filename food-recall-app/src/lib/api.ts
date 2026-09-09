@@ -337,6 +337,7 @@ function parseErrorCode(status: number, body: unknown): FetchError {
     typeof body === "object" && body !== null && "error" in body
       ? String((body as { error: { message?: string } }).error.message || "")
       : "";
+  // openFDA returns HTTP 404 + "No matches found" for empty result sets — expected, not an outage.
   if (status === 404 && /no matches/i.test(msg)) {
     return { code: "NOT_FOUND", message: "No matches found", status, retryable: false };
   }
@@ -385,6 +386,7 @@ export async function fetchRecalls(params?: {
     if (dp) predicates.push(dp);
   }
   const searchParam = buildSearchParam(search, predicates);
+  // openFDA rejects skip > 25,000; we do not implement search_after. Cap and refuse the request.
   const cappedSkip = Math.min(skip, 25000);
   if (cappedSkip !== skip) {
     // Offset beyond FDA limit — return empty with truncated window info, do not request

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from "react";
 import { formatRecallDate } from "../lib/formatDate";
 import type { AdverseEvent } from "../types/event";
-import type { Recall } from "../types/recall";
+import { OPENFDA_AS_PUBLISHED, type Recall } from "../types/recall";
 import RelatedEvents from "./RelatedEvents";
 
 interface Props {
@@ -72,6 +72,7 @@ export default function RecallDetail({ recall, onClose, onSelectEvent }: Props) 
           <div>
             <dt className="font-semibold">Status</dt>
             <dd>{recall.status}</dd>
+            <dd className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">{OPENFDA_AS_PUBLISHED}</dd>
           </div>
           <div>
             <dt className="font-semibold">Reason</dt>
