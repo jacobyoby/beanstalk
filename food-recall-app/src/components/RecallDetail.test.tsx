@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import "@testing-library/jest-dom/vitest";
 import type { Recall } from "../types/recall";
 import RecallDetail from "./RecallDetail";
 
@@ -160,5 +161,103 @@ describe("RecallDetail", () => {
     const link = screen.getByText(/View on FDA/);
     expect(link.getAttribute("rel")).toContain("noreferrer");
     expect(link.getAttribute("target")).toBe("_blank");
+  });
+
+  it("does not render quantity section when empty", () => {
+    render(<RecallDetail recall={makeRecall({ productQuantity: "" })} onClose={() => {}} />);
+    expect(screen.queryByText("Quantity")).toBeNull();
+  });
+
+  it("renders firm notification when present", () => {
+    render(<RecallDetail recall={makeRecall({ initialFirmNotification: "Phone" })} onClose={() => {}} />);
+    expect(screen.getByText("Phone")).toBeTruthy();
+    expect(screen.getByText("Firm Notification")).toBeTruthy();
+  });
+
+  it("does not render firm notification section when empty", () => {
+    render(<RecallDetail recall={makeRecall({ initialFirmNotification: "" })} onClose={() => {}} />);
+    expect(screen.queryByText("Firm Notification")).toBeNull();
+  });
+
+  it("does not render address section when all address fields empty", () => {
+    render(<RecallDetail recall={makeRecall({ address1: "", address2: "", postalCode: "" })} onClose={() => {}} />);
+    expect(screen.queryByText("Firm Address")).toBeNull();
+  });
+
+  it("renders FDA classification date when present", () => {
+    render(<RecallDetail recall={makeRecall({ centerClassificationDate: "20260201" })} onClose={() => {}} />);
+    expect(screen.getByText(/FDA Classification Date/)).toBeTruthy();
+  });
+
+  it("does not render FDA classification date when empty", () => {
+    render(<RecallDetail recall={makeRecall({ centerClassificationDate: "" })} onClose={() => {}} />);
+    expect(screen.queryByText("FDA Classification Date")).toBeNull();
+  });
+
+  it("generates correct FDA deep link", () => {
+    render(<RecallDetail recall={makeRecall({ productDescription: "Organic Peanut Butter" })} onClose={() => {}} />);
+    const fdaLink = screen.getByText(/View on FDA Enforcement Reports/);
+    expect(fdaLink.getAttribute("href")).toContain("accessdata.fda.gov/scripts/ires/index.cfm");
+    expect(fdaLink.getAttribute("href")).toContain(encodeURIComponent("Organic Peanut Butter"));
+    expect(fdaLink.getAttribute("target")).toBe("_blank");
+  });
+
+  it("generates correct openFDA raw JSON link", () => {
+    render(<RecallDetail recall={makeRecall({ recallNumber: "F-1234-2025" })} onClose={() => {}} />);
+    const rawLink = screen.getByText("raw openFDA JSON");
+    expect(rawLink.getAttribute("href")).toContain("api.fda.gov/food/enforcement.json");
+    expect(rawLink.getAttribute("href")).toContain("F-1234-2025");
+  });
+
+  it("FDA deep link truncates long product descriptions", () => {
+    render(<RecallDetail recall={makeRecall({ productDescription: "A".repeat(200) })} onClose={() => {}} />);
+    const href = screen.getByText(/View on FDA Enforcement Reports/).getAttribute("href") ?? "";
+    const decoded = decodeURIComponent(href);
+    const productParam = decoded.match(/Product=([^&#]+)/)?.[1];
+    expect(productParam).toBeDefined();
+    expect(productParam!.length).toBeLessThanOrEqual(80);
+  });
+
+  it("renders code info dash when empty", () => {
+    render(<RecallDetail recall={makeRecall({ codeInfo: "" })} onClose={() => {}} />);
+    expect(screen.getByText("—")).toBeTruthy();
+  });
+
+  it("focuses the close button on mount", () => {
+    render(<RecallDetail recall={makeRecall()} onClose={() => {}} />);
+    expect(screen.getByRole("button", { name: /close/i })).toHaveFocus();
+  });
+
+  it("handles minimal recall with all empty optional fields", () => {
+    render(
+      <RecallDetail
+        recall={makeRecall({
+          productDescription: "Generic Widget",
+          recallNumber: "F-5678-2025",
+          classification: "Class II",
+          distributionPattern: "",
+          city: "",
+          state: "",
+          codeInfo: "",
+          moreCodeInfo: "",
+          address1: "",
+          address2: "",
+          postalCode: "",
+          centerClassificationDate: "",
+          initialFirmNotification: "",
+          productQuantity: "",
+          terminationDate: "",
+        })}
+        onClose={() => {}}
+      />,
+    );
+    expect(screen.getByText("Generic Widget")).toBeTruthy();
+    expect(screen.getByText(/F-5678-2025/)).toBeTruthy();
+    expect(screen.getByText("Class II")).toBeTruthy();
+    expect(screen.queryByText("Termination Date")).toBeNull();
+    expect(screen.queryByText("Quantity")).toBeNull();
+    expect(screen.queryByText("Firm Notification")).toBeNull();
+    expect(screen.queryByText("Firm Address")).toBeNull();
+    expect(screen.queryByText(/More Code Info/)).toBeNull();
   });
 });
