@@ -44,17 +44,13 @@ function normalizeStatus(raw?: string): string {
   return raw.trim();
 }
 
-function stableId(r: OpenFDARecord): string {
-  if (r.recall_number) return r.recall_number;
-  if (r.event_id) return r.event_id;
-  // Fallback: deterministic hash from firm + product + reason
-  const key = `${r.recalling_firm || ""}|${r.product_description || ""}|${r.reason_for_recall || ""}`;
-  let hash = 0;
-  for (let i = 0; i < key.length; i++) {
-    hash = (hash << 5) - hash + key.charCodeAt(i);
-    hash |= 0;
-  }
-  return `gen-${Math.abs(hash).toString(36)}`;
+function stableId(r: Omit<Recall, "id">): string {
+  if (r.recallNumber.trim()) return r.recallNumber.trim();
+  // An event can contain distinct products/lots. Without a recall number,
+  // identify the full normalized record, whose field order is fixed below.
+  // Literal JSON avoids hash/delimiter collisions. Changed source fields create
+  // a new internal key; this key is never a fabricated FDA recall number.
+  return `source:${JSON.stringify(r)}`;
 }
 
 function mapOpenFDA(r: OpenFDARecord): Recall | null {
@@ -62,8 +58,7 @@ function mapOpenFDA(r: OpenFDARecord): Recall | null {
   // Preserve missing as unknown, do not invent
   const rawClassification = typeof r.classification === "string" ? r.classification : undefined;
   const rawStatus = typeof r.status === "string" ? r.status : undefined;
-  return {
-    id: stableId(r),
+  const record: Omit<Recall, "id"> = {
     recallNumber: typeof r.recall_number === "string" ? r.recall_number : "",
     eventId: typeof r.event_id === "string" ? r.event_id : "",
     productDescription: typeof r.product_description === "string" ? r.product_description : "",
@@ -95,6 +90,7 @@ function mapOpenFDA(r: OpenFDARecord): Recall | null {
     productQuantity: typeof r.product_quantity === "string" ? r.product_quantity : "",
     terminationDate: typeof r.termination_date === "string" ? r.termination_date : "",
   };
+  return { id: stableId(record), ...record };
 }
 
 export function sanitizeSearchQuery(query: string): string {
