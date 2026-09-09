@@ -1,5 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { buildGroupedSearchClause, buildSearchParam, clearCache, fetchRecalls, sanitizeSearchQuery } from "./api";
+import {
+  buildCacheKey,
+  buildGroupedSearchClause,
+  buildSearchParam,
+  clearCache,
+  fetchRecalls,
+  sanitizeSearchQuery,
+} from "./api";
 
 describe("sanitizeSearchQuery", () => {
   it("strips quotes and backslashes", () => {
@@ -355,5 +362,130 @@ describe("distribution: bounded state recognition and nationwide", () => {
     expect(matchesDistributionPattern("California, Arizona", "CA")).toBe(true);
     expect(matchesDistributionPattern("California distribution", "CA")).toBe(true);
     expect(matchesDistributionPattern("CA", "CA")).toBe(true);
+  });
+});
+
+describe("buildCacheKey — collision-free", () => {
+  it("pipe in search term does not collide with separate classification field", () => {
+    // "milk|Class II" as search + no classification vs "milk" + classification "Class II"
+    const keyA = buildCacheKey("milk|Class II", "", "", "", [], 20, 0);
+    const keyB = buildCacheKey("milk", "Class II", "", "", [], 20, 0);
+    expect(keyA).not.toBe(keyB);
+  });
+
+  it("unsorted dietary arrays produce the same cache key", () => {
+    const keyAB = buildCacheKey("", "", "", "", ["milk", "eggs"], 20, 0);
+    const keyBA = buildCacheKey("", "", "", "", ["eggs", "milk"], 20, 0);
+    expect(keyAB).toBe(keyBA);
+  });
+
+  it("identical inputs produce identical keys", () => {
+    const a = buildCacheKey("milk", "Class I", "Ongoing", "CA", ["gluten"], 10, 5);
+    const b = buildCacheKey("milk", "Class I", "Ongoing", "CA", ["gluten"], 10, 5);
+    expect(a).toBe(b);
+  });
+
+  it("different skip or limit produce different keys", () => {
+    const a = buildCacheKey("milk", "", "", "", [], 20, 0);
+    const b = buildCacheKey("milk", "", "", "", [], 20, 20);
+    expect(a).not.toBe(b);
+  });
+
+  it("sanitizes search query inside the key (strips quotes/backslashes)", () => {
+    const key = buildCacheKey('M&M "test"', "", "", "", [], 20, 0);
+    expect(key).not.toContain('"test"');
+    expect(key).toContain("M&M test");
+  });
+});
+
+describe("fetchRecalls — cache key collision integration", () => {
+  beforeEach(() => {
+    clearCache();
+    localStorage.clear();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  const mockSuccess = (
+    results: unknown[] = [
+      {
+        recall_number: "F-1",
+        product_description: "Real",
+        reason_for_recall: "Hazard",
+        classification: "Class I",
+        status: "Ongoing",
+        recalling_firm: "Firm",
+        distribution_pattern: "CA",
+      },
+    ],
+  ) =>
+    vi
+      .fn()
+      .mockResolvedValue({ ok: true, json: async () => ({ results, meta: { results: { total: results.length } } }) });
+
+  it("search with pipe in term does not return cached result from separate classification query", async () => {
+    // First: fetch with search "milk" + classification "Class II"
+    vi.stubGlobal(
+      "fetch",
+      mockSuccess([
+        {
+          recall_number: "F-1",
+          product_description: "Milk product",
+          reason_for_recall: "X",
+          classification: "Class II",
+          status: "Ongoing",
+          recalling_firm: "Firm",
+          distribution_pattern: "",
+        },
+      ]),
+    );
+    const r1 = await fetchRecalls({ search: "milk", classification: "Class II", limit: 6, skip: 0 });
+    expect(r1.recalls.length).toBe(1);
+
+    // Second: fetch with search "milk|Class II" + no classification — should NOT hit cache
+    vi.stubGlobal(
+      "fetch",
+      mockSuccess([
+        {
+          recall_number: "F-2",
+          product_description: "Different product",
+          reason_for_recall: "Y",
+          classification: "Class I",
+          status: "Ongoing",
+          recalling_firm: "Other",
+          distribution_pattern: "",
+        },
+      ]),
+    );
+    const r2 = await fetchRecalls({ search: "milk|Class II", limit: 6, skip: 0 });
+    expect(r2.recalls[0].recallNumber).toBe("F-2");
+    expect(r2.recalls[0].productDescription).toBe("Different product");
+  });
+
+  it("dietary arrays in different order hit the same cache entry (stale fallback)", async () => {
+    // First call: populate cache with milk, eggs
+    vi.stubGlobal(
+      "fetch",
+      mockSuccess([
+        {
+          recall_number: "F-1",
+          product_description: "Allergen product",
+          reason_for_recall: "X",
+          classification: "Class I",
+          status: "Ongoing",
+          recalling_firm: "Firm",
+          distribution_pattern: "",
+        },
+      ]),
+    );
+    const r1 = await fetchRecalls({ search: "", dietary: ["milk", "eggs"], limit: 6, skip: 0 });
+    expect(r1.recalls.length).toBe(1);
+
+    // Second call with reversed dietary order — simulate network failure
+    // Cache key should match, so stale data from first call is returned
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("Failed to fetch")));
+    const r2 = await fetchRecalls({ search: "", dietary: ["eggs", "milk"], limit: 6, skip: 0 });
+    expect(r2.isStale).toBe(true);
+    expect(r2.recalls[0].recallNumber).toBe("F-1");
   });
 });

@@ -217,6 +217,23 @@ const CACHE_KEY = "ponder:openfda:cache";
 const SYNC_KEY = "ponder:openfda:lastSynced";
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000; // 6h
 
+/**
+ * Build a collision-free cache key using JSON.stringify of a tuple.
+ * Dietary array is sorted so [milk, eggs] and [eggs, milk] produce the same key.
+ */
+export function buildCacheKey(
+  search: string,
+  classification: string,
+  status: string,
+  state: string,
+  dietary: string[],
+  limit: number,
+  skip: number,
+): string {
+  const sortedDietary = [...dietary].sort();
+  return JSON.stringify([sanitizeSearchQuery(search), classification, status, state, sortedDietary, limit, skip]);
+}
+
 interface CacheEntry {
   key: string;
   data: { recalls: Recall[]; total: number };
@@ -368,7 +385,6 @@ export async function fetchRecalls(params?: {
     if (dp) predicates.push(dp);
   }
   const searchParam = buildSearchParam(search, predicates);
-  const dietaryKey = (dietary as string[]).join(",");
   const cappedSkip = Math.min(skip, 25000);
   if (cappedSkip !== skip) {
     // Offset beyond FDA limit — return empty with truncated window info, do not request
@@ -386,7 +402,7 @@ export async function fetchRecalls(params?: {
       isDemo: false,
     };
   }
-  const cacheKey = `${sanitizeSearchQuery(search)}|${classification}|${status}|${state}|${dietaryKey}|${limit}|${cappedSkip}`;
+  const cacheKey = buildCacheKey(search, classification, status, state, dietary, limit, cappedSkip);
   const cachedEntry = getCacheEntry(cacheKey);
   const cached = cachedEntry?.data ?? null;
   const demo = isDemoMode();
