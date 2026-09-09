@@ -5,6 +5,7 @@ import type { Recall } from '../types/recall'
 
 const makeRecall = (overrides: Partial<Recall> = {}): Recall => ({
   id: 'F-001-2026',
+  source: 'FDA',
   recallNumber: 'F-001-2026',
   eventId: '90001',
   productDescription: 'Chocolate Bar, 3oz',
@@ -159,5 +160,31 @@ describe('RecallDetail', () => {
     const link = screen.getByText(/View on FDA/)
     expect(link.getAttribute('rel')).toContain('noreferrer')
     expect(link.getAttribute('target')).toBe('_blank')
+  })
+
+  it('renders USDA source badge and FSIS detail fields', () => {
+    render(
+      <RecallDetail
+        recall={makeRecall({
+          source: 'USDA',
+          brand: 'Prairie Pack',
+          hazard: 'E. coli O157:H7',
+          establishmentNumber: 'M-12345',
+          headline: 'Ground beef recalled',
+          productDescription: 'Ground beef, 1lb',
+          detailUrl: 'https://www.fsis.usda.gov/recalls-alerts/example',
+        })}
+        onClose={() => {}}
+      />
+    )
+    expect(screen.getByText('USDA FSIS')).toBeTruthy()
+    expect(screen.getByText('Prairie Pack')).toBeTruthy()
+    expect(screen.getByText('E. coli O157:H7')).toBeTruthy()
+    expect(screen.getByText('M-12345')).toBeTruthy()
+    expect(screen.getByText('Ground beef recalled')).toBeTruthy()
+    const link = screen.getByText(/View on USDA FSIS/)
+    expect(link.getAttribute('href')).toBe('https://www.fsis.usda.gov/recalls-alerts/example')
+    expect(link.getAttribute('rel')).toContain('noreferrer')
+    expect(screen.queryByText(/View on FDA/)).toBeNull()
   })
 })

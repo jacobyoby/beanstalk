@@ -5,6 +5,7 @@ import type { Recall } from '../types/recall'
 
 const makeRecall = (overrides: Partial<Recall> = {}): Recall => ({
   id: 'F-001-2026',
+  source: 'FDA',
   recallNumber: 'F-001-2026',
   eventId: '90001',
   productDescription: 'Chocolate Bar, 3oz',
@@ -141,5 +142,46 @@ describe('RecallCard', () => {
   it('renders distribution pattern', () => {
     render(<RecallCard recall={makeRecall()} onSelect={() => {}} isNew={false} watchlist={[]} />)
     expect(screen.getByText(/Dist: Nationwide/)).toBeTruthy()
+  })
+
+  it('renders FDA source badge by default', () => {
+    render(<RecallCard recall={makeRecall()} onSelect={() => {}} isNew={false} watchlist={[]} />)
+    expect(screen.getByText('FDA')).toBeTruthy()
+  })
+
+  it('renders USDA source badge for FSIS recalls', () => {
+    render(
+      <RecallCard
+        recall={makeRecall({
+          source: 'USDA',
+          brand: 'Prairie Pack',
+          hazard: 'E. coli O157:H7',
+        })}
+        onSelect={() => {}}
+        isNew={false}
+        watchlist={[]}
+      />
+    )
+    expect(screen.getByText('USDA')).toBeTruthy()
+    expect(screen.queryByText('FDA')).toBeNull()
+  })
+
+  it('matches watchlist against USDA brand and hazard fields', () => {
+    render(
+      <RecallCard
+        recall={makeRecall({
+          source: 'USDA',
+          productDescription: 'Ground beef',
+          reasonForRecall: 'Possible contamination',
+          brand: 'Prairie Pack',
+          hazard: 'E. coli O157:H7',
+        })}
+        onSelect={() => {}}
+        isNew={false}
+        watchlist={['prairie']}
+      />
+    )
+    expect(screen.getByText('Watching')).toBeTruthy()
+    expect(screen.getByText(/Watch: prairie/)).toBeTruthy()
   })
 })
