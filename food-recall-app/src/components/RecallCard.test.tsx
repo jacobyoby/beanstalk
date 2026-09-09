@@ -149,18 +149,32 @@ describe("RecallCard", () => {
   });
 
   it("handles empty distribution pattern gracefully", () => {
-    render(<RecallCard recall={makeRecall({ distributionPattern: "" })} onSelect={() => {}} isNew={false} watchlist={[]} />);
+    render(
+      <RecallCard recall={makeRecall({ distributionPattern: "" })} onSelect={() => {}} isNew={false} watchlist={[]} />,
+    );
     expect(screen.getByText(/Dist:/)).toBeTruthy();
   });
 
   it("handles Class II classification badge styling", () => {
-    render(<RecallCard recall={makeRecall({ classification: "Class II" })} onSelect={() => {}} isNew={false} watchlist={[]} />);
+    render(
+      <RecallCard
+        recall={makeRecall({ classification: "Class II" })}
+        onSelect={() => {}}
+        isNew={false}
+        watchlist={[]}
+      />,
+    );
     expect(screen.getByText("Class II")).toBeTruthy();
   });
 
   it("handles Class III classification badge styling", () => {
     render(
-      <RecallCard recall={makeRecall({ classification: "Class III" })} onSelect={() => {}} isNew={false} watchlist={[]} />,
+      <RecallCard
+        recall={makeRecall({ classification: "Class III" })}
+        onSelect={() => {}}
+        isNew={false}
+        watchlist={[]}
+      />,
     );
     expect(screen.getByText("Class III")).toBeTruthy();
   });

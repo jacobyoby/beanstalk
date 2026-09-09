@@ -213,9 +213,9 @@ describe("RecallDetail", () => {
     render(<RecallDetail recall={makeRecall({ productDescription: "A".repeat(200) })} onClose={() => {}} />);
     const href = screen.getByText(/View on FDA Enforcement Reports/).getAttribute("href") ?? "";
     const decoded = decodeURIComponent(href);
-    const productParam = decoded.match(/Product=([^&#]+)/)?.[1];
-    expect(productParam).toBeDefined();
-    expect(productParam!.length).toBeLessThanOrEqual(80);
+    const productParam = decoded.match(/Product=([^&#]+)/)?.[1] ?? "";
+    expect(productParam.length).toBeGreaterThan(0);
+    expect(productParam.length).toBeLessThanOrEqual(80);
   });
 
   it("renders code info dash when empty", () => {
