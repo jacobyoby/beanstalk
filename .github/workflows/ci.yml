@@ -90,6 +90,8 @@ jobs:
           fi
 
       - name: Body references an issue and has a Summary
+        # Dependabot supplies its own release-note body; dependency bumps need no issue.
+        if: github.event.pull_request.user.login != 'dependabot[bot]'
         working-directory: .
         run: |
           gh pr view "$PR" --json body -q .body > body.md
