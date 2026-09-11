@@ -1,0 +1,12 @@
+{
+  "name": "Beanstalk",
+  "install": "cd food-recall-app && npm ci",
+  "ports": [{ "name": "vite dev server", "port": 5173 }],
+  "terminals": [
+    {
+      "name": "dev",
+      "command": "cd food-recall-app && npm run dev",
+      "description": "Vite dev server for the Beanstalk food-recall-app, served at http://localhost:5173/beanstalk/ (append ?demo=1 for fictional demo data)."
+    }
+  ]
+}
