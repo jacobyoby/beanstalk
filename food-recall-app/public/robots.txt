@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://jacobyoby.github.io/beanstalk/sitemap.xml
+Sitemap: https://jacobrakaifoundation.github.io/beanstalk/sitemap.xml

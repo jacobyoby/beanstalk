@@ -1,0 +1,82 @@
+name: Beanstalk Pages
+
+# Publishes the live app at https://jacobrakaifoundation.github.io/beanstalk/.
+#
+# Every push to main that touches the app rebuilds food-recall-app/ and hands
+# dist/ to GitHub Pages through the Actions deployment path. There is no
+# gh-pages branch any more: the site used to be published by pushing a built
+# tree to that branch by hand, and when the branch was deleted during cleanup
+# the site went with it. A deployment that is rebuilt from main on every merge
+# has nothing to lose.
+#
+# Requires Settings → Pages → Source set to "GitHub Actions". With the source
+# still on a branch, the deploy job fails with "Not Found" rather than
+# publishing anywhere unexpected.
+#
+# Actions are pinned to full commit SHAs with the version in a trailing comment,
+# per the org's docs/MONITORING.md. Dependabot keeps the pins current.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "food-recall-app/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+# One deployment at a time, and never cancel one that is mid-flight: a
+# half-published site is worse than a slightly stale one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: food-recall-app
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: food-recall-app/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      # `npm run build` is `tsc --noEmit && vite build`; vite.config.ts sets
+      # base "/beanstalk/" so asset URLs and the service-worker scope match the
+      # project-site path.
+      - name: Build
+        run: npm run build
+
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
+
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5
+        with:
+          path: food-recall-app/dist
+
+  deploy:
+    name: deploy
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write # publish the artifact
+      id-token: write # OIDC token that proves the artifact came from this run
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
