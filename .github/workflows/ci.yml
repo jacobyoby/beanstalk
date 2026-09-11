@@ -1,65 +1,138 @@
 name: ci
+
+# The one workflow that runs on every push and pull request. Two jobs:
+#
+#   checks  — install once, then lint, build and test in sequence on a single
+#             runner. `npm run build` already runs `tsc --noEmit`, so there is
+#             no separate typecheck step; it would only repeat the build's
+#             first half.
+#   pr      — pull requests only. Title format, the `Closes #N` reference, the
+#             template's Summary section, auto-labels, CODEOWNERS validity and
+#             a grep for hardcoded secrets in the diff. No Node, no install:
+#             it finishes in seconds.
+#
+# This replaces three workflows (ci, pr-review, Adversarial Verify) that
+# together ran thirteen jobs and five `npm ci` per push, most of them repeating
+# each other byte for byte. Security scanning (CodeQL, dependency review) now
+# lives in security.yml, which calls the organization's reusable workflow.
+#
+# Actions are pinned to full commit SHAs with the version in a trailing comment,
+# per the org's docs/MONITORING.md. Dependabot keeps the pins current.
+
 on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
+
 permissions:
   contents: read
+
+defaults:
+  run:
+    working-directory: food-recall-app
+
 jobs:
-  build:
-    name: build
+  checks:
+    name: checks
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    defaults: { run: { working-directory: food-recall-app } }
+    timeout-minutes: 15
+    if: github.event.pull_request.draft != true
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
-      - run: npm ci
-      - run: npm run build
-  lint:
-    name: lint
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: food-recall-app/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint and format (biome check)
+        run: npm run check
+
+      - name: Typecheck and build
+        run: npm run build
+
+      - name: Test
+        run: npm run test:coverage
+
+  pr:
+    name: pull request hygiene
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    defaults: { run: { working-directory: food-recall-app } }
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      PR: ${{ github.event.pull_request.number }}
+      TITLE: ${{ github.event.pull_request.title }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
-      - run: npm ci
-      - run: npm run check
-  typecheck:
-    name: typecheck
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    defaults: { run: { working-directory: food-recall-app } }
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
-      - run: npm ci
-      - run: npx tsc --noEmit
-  unused:
-    name: unused exports
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with: { node-version: 22 }
-      - run: "npx knip --reporter symbols || echo 'knip: no unused exports found or knip not installed'"
-  test:
-    name: test
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    defaults: { run: { working-directory: food-recall-app } }
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
-        with: { node-version: 22, cache: npm, cache-dependency-path: food-recall-app/package-lock.json }
-      - run: npm ci
-      - run: npm run test
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Title follows Conventional Commits
+        working-directory: .
+        run: |
+          echo "Title: $TITLE"
+          if ! printf '%s' "$TITLE" | grep -Eq '^(feat|fix|docs|style|refactor|perf|test|chore|ci|revert)(\(.+\))?!?: .+'; then
+            echo "::error::PR title must follow Conventional Commits, e.g. 'feat: add recall filters'"
+            exit 1
+          fi
+
+      - name: Body references an issue and has a Summary
+        working-directory: .
+        run: |
+          gh pr view "$PR" --json body -q .body > body.md
+          if ! grep -Eqi '\b(closes|fixes|resolves)\b[[:space:]]+#[0-9]+' body.md; then
+            echo "::error::PR body must reference the issue it closes, e.g. 'Closes #12'"
+            exit 1
+          fi
+          grep -q '## Summary' body.md || echo "::warning::PR body has no '## Summary' section (see the pull request template)"
+
+      - name: Label by changed files
+        working-directory: .
+        run: |
+          gh pr view "$PR" --json files -q '.files[].path' > files.txt
+          if grep -q '^food-recall-app/src/' files.txt; then gh pr edit "$PR" --add-label enhancement; fi
+          if grep -Eq '\.md$' files.txt;              then gh pr edit "$PR" --add-label docs; fi
+          if grep -q '^\.github/' files.txt;          then gh pr edit "$PR" --add-label ci; fi
+
+      - name: CODEOWNERS is valid
+        working-directory: .
+        # GitHub parses CODEOWNERS itself and reports problems through this
+        # endpoint — no third-party validator needed.
+        run: |
+          errors=$(gh api "repos/${GITHUB_REPOSITORY}/codeowners/errors" --jq '.errors | length')
+          if [ "$errors" != "0" ]; then
+            gh api "repos/${GITHUB_REPOSITORY}/codeowners/errors" --jq '.errors[] | "::error file=\(.path),line=\(.line)::\(.message)"'
+            exit 1
+          fi
+          echo "CODEOWNERS: no errors"
+
+      - name: No hardcoded secrets in the diff
+        working-directory: .
+        # Belt-and-braces alongside GitHub secret scanning. Looks for
+        # key=value assignments with a long quoted literal on the right; the
+        # exclusions keep workflow references to GITHUB_TOKEN out of it.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          pat="(api[_-]?key|secret|password|token)[[:space:]]*[=:][[:space:]]*[\"'][^\"']{8,}"
+          if git diff "origin/${BASE_REF}...HEAD" \
+              | grep '^+' \
+              | grep -viE 'secrets\.GITHUB_TOKEN|github\.token|GH_TOKEN|GITHUB_TOKEN' \
+              | grep -iE "$pat"; then
+            echo "::error::Possible hardcoded secret in the diff"
+            exit 1
+          fi
+          echo "No hardcoded secrets detected"
