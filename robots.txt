@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://jacobrakaifoundation.github.io/beanstalk/sitemap.xml
