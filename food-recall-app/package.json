@@ -2,7 +2,7 @@
   "name": "food-recall-app",
   "private": true,
   "version": "0.1.0",
-  "homepage": "https://jacobyoby.github.io/beanstalk/",
+  "homepage": "https://jacobrakaifoundation.github.io/beanstalk/",
   "type": "module",
   "scripts": {
     "dev": "vite",
