@@ -40,6 +40,11 @@ export default defineConfig({
           })
         },
       },
+      '/api/fsis': {
+        target: 'https://www.fsis.usda.gov',
+        changeOrigin: true,
+        rewrite: path => path.replace(/^\/api\/fsis/, ''),
+      },
     },
   },
   test: {

@@ -1,4 +1,5 @@
 export type RecallClassification = 'Class I' | 'Class II' | 'Class III' | 'Not Yet Classified' | 'Unknown'
+export type RecallSource = 'FDA' | 'USDA-FSIS'
 export interface Recall {
   id: string
   recallNumber: string
@@ -26,5 +27,10 @@ export interface Recall {
   initialFirmNotification: string
   productQuantity: string
   terminationDate: string
+  source: RecallSource
+  // FSIS-specific fields (empty for FDA recalls)
+  establishmentNumber?: string
+  hazard?: string
+  link?: string
 }
 export interface OpenFDAResponse { meta: { results: { total: number; skip: number; limit: number } }; results: any[] }
