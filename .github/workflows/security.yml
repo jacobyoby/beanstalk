@@ -1,0 +1,37 @@
+name: Security
+
+# CodeQL and dependency review, via the organization's reusable workflow in
+# jacobrakaiFoundation/.github. This is the adoption block from that repo's
+# docs/MONITORING.md, which names beanstalk as a caller.
+#
+# The weekly schedule matters as much as the scan: a dependency that becomes
+# vulnerable after the last commit is not surfaced until something runs.
+#
+# Permissions are granted here at the caller's level — a reusable workflow can
+# lower them but never raise them — so `security-events: write` must appear
+# here or CodeQL cannot upload results.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  schedule:
+    - cron: "17 6 * * 1" # 06:17 UTC Mondays
+
+concurrency:
+  group: security-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  pull-requests: write
+
+jobs:
+  scan:
+    if: github.event.pull_request.draft != true
+    uses: jacobrakaiFoundation/.github/.github/workflows/security-scan.yml@main
+    with:
+      codeql-languages: '["javascript-typescript"]'
+      codeql-build-mode: none
