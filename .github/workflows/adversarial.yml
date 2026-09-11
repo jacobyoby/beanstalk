@@ -2,6 +2,9 @@ name: Adversarial Verify
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
+  # `labeled` fires for every label, so each job below is gated on the
+  # `retry-adversarial` label specifically. Without that gate, adding `docs`
+  # or any other label re-ran all five skeptics (beanstalk#120 ran 4x).
   pull_request_target:
     types: [labeled]
 concurrency:
@@ -16,7 +19,7 @@ jobs:
     name: "Skeptic: Claim Refuter"
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: github.event_name == 'pull_request' || contains(github.event.label.name, 'retry-adversarial')
+    if: github.event_name == 'pull_request' || github.event.label.name == 'retry-adversarial'
     steps:
       - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
@@ -38,6 +41,7 @@ jobs:
     name: "Skeptic: Test Adversary"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: github.event_name == 'pull_request' || github.event.label.name == 'retry-adversarial'
     steps:
       - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
@@ -52,6 +56,7 @@ jobs:
     name: "Skeptic: Security"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: github.event_name == 'pull_request' || github.event.label.name == 'retry-adversarial'
     steps:
       - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
@@ -68,6 +73,7 @@ jobs:
     name: "Skeptic: Data Integrity"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: github.event_name == 'pull_request' || github.event.label.name == 'retry-adversarial'
     steps:
       - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
@@ -84,6 +90,7 @@ jobs:
     name: "Skeptic: UX Consistency"
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    if: github.event_name == 'pull_request' || github.event.label.name == 'retry-adversarial'
     steps:
       - uses: actions/checkout@v7
         with: { ref: "refs/pull/${{ github.event.pull_request.number }}/merge", fetch-depth: 0 }
@@ -99,7 +106,7 @@ jobs:
     name: adversarial-verdict
     runs-on: ubuntu-latest
     needs: [skeptic-claims, skeptic-tests, skeptic-security, skeptic-data, skeptic-ux]
-    if: always()
+    if: always() && (github.event_name == 'pull_request' || github.event.label.name == 'retry-adversarial')
     steps:
       - name: Aggregate verdict
         run: |
